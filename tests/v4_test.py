@@ -92,7 +92,7 @@ async def main():
         pg.on("console", lambda m: console.append(m.text) if m.type == "error" else None)
         pg.on("pageerror", lambda e: pageerr.append(str(e)))
         pg.on("requestfailed", lambda r: reqfail.append(r.url + " " + str(r.failure)))
-        pg.on("response", lambda r: audio.append(r.url) if "/audio/" in r.url and r.status == 200 else None)
+        pg.on("response", lambda r: audio.append(r.url) if "/audio/" in r.url and r.status in (200, 206) else None)
 
         await pg.goto(base, wait_until="load")
         await pg.wait_for_timeout(500)
@@ -175,6 +175,18 @@ async def main():
         ok("입열량 팝오버 — 공식 제시", "H = (60 × E × I) ÷ (1000 × v)" in heat)
         ok("입열량 팝오버 — 정답 미노출", "1.51" not in heat)
         ok("입열량 안내 — 직접 계산", "직접 계산" in heat)
+
+        # 가장 긴 팝오버(입열량)도 제출 바를 가리지 않는다
+        await pg.eval_on_selector('.field[data-fid="heatInput"]', "e => e.scrollIntoView({block:'center'})")
+        await pg.click('.field[data-fid="heatInput"] .qm')
+        await pg.wait_for_selector("#pop.on")
+        hgeo = await pg.evaluate("""() => {
+            const p = document.querySelector('#pop').getBoundingClientRect();
+            const b = document.querySelector('.submit-bar').getBoundingClientRect();
+            return {popBottom:p.bottom, barTop:b.top, overlap:p.bottom > b.top + 1, vh:innerHeight};
+        }""")
+        ok("긴 팝오버도 제출 바 비가림", (not hgeo["overlap"]) and hgeo["popBottom"] <= hgeo["vh"], json.dumps(hgeo))
+        await pg.keyboard.press("Escape")
 
         # 문항 클릭 → 근거 열림 / 더블클릭 → 닫힘
         await pg.eval_on_selector('.field[data-fid="rootGap"]', "e => e.scrollIntoView({block:'center'})")

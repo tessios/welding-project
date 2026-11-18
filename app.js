@@ -649,7 +649,11 @@
   function placePop(el){
     const vw = window.innerWidth, vh = window.innerHeight;
     const bar = $('.submit-bar');
-    const barH = bar ? Math.min(bar.getBoundingClientRect().height, 180) : 0;
+    const barRect = bar ? bar.getBoundingClientRect() : null;
+    const barH = barRect ? Math.min(barRect.height, 180) : 0;
+    /* 제출 바는 sticky라서 화면 맨 아래보다 위에 떠 있을 수 있다 — 실제 상단을 경계로 쓴다 */
+    const barTop = barRect && barRect.height > 0 ? Math.min(barRect.top, vh) : vh;
+    const limitBottom = barTop - 10;          // 팝오버 하단이 넘지 않아야 하는 선
     const r = el.getBoundingClientRect();
     const mobile = vw < 780;
 
@@ -658,8 +662,8 @@
       /* 모바일: 화면을 덮지 않는 컴팩트 시트 — 높이를 줄이고 내부 스크롤 */
       pop.classList.add('sheet');
       pop.style.left = pop.style.top = pop.style.width = '';
-      pop.style.setProperty('--sheet-bottom', (barH + 12) + 'px');
-      const cap = Math.max(160, Math.min(vh * 0.42, vh - barH - 180));
+      pop.style.setProperty('--sheet-bottom', Math.max(0, vh - limitBottom) + 'px');
+      const cap = Math.max(150, Math.min(vh * 0.42, limitBottom - 130));
       pop.style.maxHeight = cap + 'px';
       return;
     }
@@ -669,8 +673,8 @@
     const w = Math.min(430, vw - 24);
     pop.style.width = w + 'px';
     const ph = pop.offsetHeight;
-    const maxH = vh - barH - 96;
-    const clampTop = t => Math.min(Math.max(72, t), Math.max(72, vh - barH - Math.min(ph, maxH) - 12));
+    const maxH = Math.max(200, limitBottom - 72);
+    const clampTop = t => Math.min(Math.max(72, t), Math.max(72, limitBottom - Math.min(ph, maxH)));
     const rightRoom = vw - r.right - 16;
     const leftRoom = r.left - 16;
     let left, top;
@@ -681,7 +685,7 @@
       left = r.left - w - 14; top = clampTop(r.top - 18);
       pop.classList.add('side-l');
     } else {                                  // 좁은 화면: 아래 → 위
-      const below = vh - barH - r.bottom - 14;
+      const below = limitBottom - r.bottom - 14;
       const above = r.top - 78;
       if(ph <= below || below >= above){ top = clampTop(r.bottom + 10); }
       else { top = clampTop(r.top - Math.min(ph, maxH) - 10); }
