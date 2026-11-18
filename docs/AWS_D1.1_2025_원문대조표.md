@@ -144,8 +144,8 @@ size of fillet by the amount of separation.”
 페이드·톤 필터·loudnorm(-16 LUFS)을 적용했습니다.
 
 2026-11-18 4차 개편에서 아나운서 대본 13개를 새로 합성하고 **faster-whisper small-int8**(CPU 1스레드, `CT2_USE_MKL=0`)로
-전수 전사해 문장 일치율(`match`)을 함께 남겼습니다(→ `docs/audio_transcript.json`). 13개 중 11개가 0.92 이상,
-나머지 2개(n_brief 0.74 · n_wps 0.84)는 고유명사·숫자 표기 차이이며 들리는 문장은 대본과 같습니다.
+전수 전사해 문장 일치율(`match`)을 함께 남겼습니다(→ `docs/audio_transcript.json`). 13개 중 10개가 0.92 이상,
+나머지 3개(n_brief 0.81 · n_wps 0.84 · n_summary 0.85)는 ‘웨브·브래킷·A36’ 같은 고유명사를 전사기가 다르게 받아쓴 차이입니다.
 
 ---
 

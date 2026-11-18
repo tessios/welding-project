@@ -81,7 +81,7 @@ app.js       화면 전환 · 음성/음악 제어 · 팝오버(클릭 열기/�
 audio/       내레이션·효과음·배경음악 (mp3)
 fonts/       Pretendard Variable (자체 호스팅 — 오프라인에서도 동일 서체)
 tools/       make_audio.py(대본 TTS·전사 검수) · make_bgm.py(배경음악 합성)
-tests/       v4_test.py 전 구간 Playwright 검증 (51항목, legacy/ = 이전 버전 스크립트)
+tests/       v4_test.py 전 구간 Playwright 검증 (52항목) · live_v4.py 배포본 검증 (28항목) · legacy/ = 이전 버전
 docs/        AWS_D1.1_2025_원문대조표.md · AnnexJ_사전인정_검토메모.md · 강의운영_검토메모.md · audio_transcript.json
 screenshots/ 검증 캡처(로컬 산출물, 저장소에는 올리지 않음)
 ```
@@ -93,7 +93,7 @@ pip install playwright && playwright install chromium
 LD_LIBRARY_PATH=/workspace/.libs/usr/lib/x86_64-linux-gnu python3 tests/v4_test.py
 ```
 
-검증 항목(51개): 값을 대신 넣는 버튼 0건 · 참조 서식·양식 명칭 0건(화면·팝오버 전수) · 선택형/입력형 구성(칩·드롭다운 3·입력 7) ·
+검증 항목(52개): 값을 대신 넣는 버튼 0건 · 참조 서식·양식 명칭 0건(화면·팝오버 전수) · 선택형/입력형 구성(칩·드롭다운 3·입력 7) ·
 와이어/전류/전압 자유 입력 통과(1.6 · 400 · 31로도 100점) · 입열량 조건·공식 제시 및 정답 미노출 · 직접 계산 입력 ·
 문항 클릭 열기 / 더블클릭 닫기 / 입력 중 미열림 · 인물 통화 음성 요청 0건 · 전화벨·성공·파단 효과음 ·
 성공/파단 엔딩 내레이션(n_end_pass·n_end_fail) · 붕괴 연출 · 콘솔 에러 0 · 모바일(390×844) 근거 높이 ≤52 vh·폭·내부 스크롤·
