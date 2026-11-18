@@ -1201,6 +1201,13 @@
   if(mute) mute.addEventListener('click', () => AU.setMuted(!AU.muted));
   const bgmBtn = $('#btnBgm');
   if(bgmBtn) bgmBtn.addEventListener('click', () => AU.setBgm(!AU.bgmOn));
+  /* QA 훅 — 배경음악 덕킹·토글 상태 확인용(읽기 전용) */
+  window.__wpsAudio = {
+    get bgmVol(){ return AU.bgm ? Math.round(AU.bgm.volume * 1000) / 1000 : null; },
+    get muted(){ return AU.muted; },
+    get bgmOn(){ return AU.bgmOn; }
+  };
+
   document.addEventListener('keydown', e => {
     if(state.scene === 'landing' && (e.key === 'Enter' || e.key === ' ')){
       e.preventDefault(); AU.startBgm(); show('call');

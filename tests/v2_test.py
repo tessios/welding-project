@@ -126,6 +126,22 @@ async def main():
            f"audio 200: {len(audio_ok)}건")
         ok("아나운서 자막 표시", await pg.locator("#narrBar").is_visible())
 
+        # BGM 덕킹 (음성 중 0.15 → 0.04)
+        ducked = await pg.evaluate("window.__wpsAudio.bgmVol")
+        ok("BGM 덕킹(음성 중)", ducked is not None and ducked <= 0.08, str(ducked))
+        restored = None
+        for _ in range(30):
+            await pg.wait_for_timeout(700)
+            v = await pg.evaluate("window.__wpsAudio.bgmVol")
+            if v and v >= 0.12:
+                restored = v; break
+        ok("BGM 음량 복귀(음성 후)", restored is not None and restored >= 0.12, str(restored))
+        bgm_before = await pg.evaluate("window.__wpsAudio.bgmOn")
+        await pg.click("#btnBgm")
+        bgm_after = await pg.evaluate("window.__wpsAudio.bgmOn")
+        ok("BGM 토글", bgm_before and not bgm_after, f"{bgm_before}->{bgm_after}")
+        await pg.click("#btnBgm")
+
         # 음소거 토글
         await pg.click("#btnMute")
         muted = await pg.get_attribute("#btnMute", "aria-pressed")
