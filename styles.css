@@ -155,8 +155,8 @@ button.chip:hover{border-color:var(--ink)}
 .doc-meta{font-family:var(--mono); font-size:11px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; margin-top:4px}
 .fields{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line2)}
 .field{
-  position:relative; background:#fff; padding:11px 12px 12px 38px; cursor:pointer; border:0; text-align:left;
-  transition:background .15s, box-shadow .15s; min-height:74px; display:flex; flex-direction:column; gap:3px;
+  position:relative; background:#fff; padding:11px 12px 14px 38px; cursor:pointer; border:0; text-align:left;
+  transition:background .15s, box-shadow .15s; min-height:84px; display:flex; flex-direction:column; gap:3px; align-content:start;
 }
 .field:hover{background:#fbfcfd}
 .field .pnum{
@@ -164,7 +164,7 @@ button.chip:hover{border-color:var(--ink)}
   display:grid; place-items:center; font-size:10.5px; font-weight:800; color:var(--ink2); font-family:var(--mono);
 }
 .field .flabel{font-size:11px; color:var(--muted); font-weight:700; letter-spacing:.02em}
-.field .fvalue{font-size:13px; font-weight:650; color:var(--ink); line-height:1.45}
+.field .fvalue{font-size:13px; font-weight:650; color:var(--ink); line-height:1.5; overflow-wrap:anywhere}
 .field.sel{background:#f3f6f9; box-shadow:inset 3px 0 0 var(--ink)}
 .field.visited .pnum{background:var(--ink); color:#fff}
 .field.q-target{outline:2px dashed var(--TASK); outline-offset:-2px}
