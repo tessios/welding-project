@@ -4,13 +4,14 @@
 1) 「이 값 넣기」 버튼 0건 — 선택형(chips/select)과 직접 입력형(input)만 존재
 2) 와이어 지름·전류·전압 비필수 + 자유 입력(어떤 유효값/범위든 통과)
 3) 입열량은 조건·공식만 제시, 수강생이 직접 계산해 입력
-4) 화면·팝오버·해설 어디에도 Form J-2/양식 문구 0건
+4) 화면·팝오버·해설 어디에도 참조 양식 명칭/‘양식’ 문구 0건
 5) 인물 통화 음성 제거 — 아나운서 내레이션 + 효과음(전화벨/성공/파단/붕괴)
 6) 모바일(390×844) 근거 팝오버 컴팩트 + 문항 클릭 열림 + 더블탭 닫힘
 """
 import asyncio, os, threading, functools, http.server, socketserver, json, sys
 from playwright.async_api import async_playwright
 
+FORBIDDEN = "Form " + "J-2"   # 화면에 남아 있으면 안 되는 참조 양식 명칭
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "screenshots", "v4")
 os.makedirs(OUT, exist_ok=True)
@@ -99,7 +100,7 @@ async def main():
         await pg.screenshot(path=os.path.join(OUT, "01-landing.png"))
         body = await pg.inner_text("body")
         ok("표지 — ASTM A36 표기", "ASTM A36" in body)
-        ok("표지 — Form J-2 0건", "Form J-2" not in body)
+        ok("표지 — 참조 양식 명칭 0건", FORBIDDEN not in body)
 
         # 시작 → 전화 장면 (통화 음성 없음, 벨소리만)
         await pg.click("#btnStart")
@@ -125,7 +126,7 @@ async def main():
         ok("브리핑 제목", title == "내일 용접 할 개소", title)
         ok("현장 상황 4항목", await pg.locator("#scene-brief .drawer").count() == 4)
         brief_txt = await pg.inner_text("#scene-brief")
-        ok("브리핑 — Form J-2 0건", "Form J-2" not in brief_txt)
+        ok("브리핑 — 참조 양식 명칭 0건", FORBIDDEN not in brief_txt)
         await pg.locator("#scene-brief .drawer").first.click()
         await pg.wait_for_timeout(250)
         await pg.screenshot(path=os.path.join(OUT, "04-brief.png"))
@@ -137,7 +138,7 @@ async def main():
         ok("스무 칸(20) 렌더", nfields == 20, nfields)
         ok("「이 값 넣기」 버튼 0건", await pg.locator(".fill-btn").count() == 0)
         doc = await pg.inner_text("#wpsDoc")
-        ok("WPS 머리말 — Form J-2 0건", "Form J-2" not in doc, doc[:80].replace("\n", " / "))
+        ok("WPS 머리말 — 참조 양식 명칭 0건", FORBIDDEN not in doc, doc[:80].replace("\n", " / "))
         ok("WPS 머리말 — Clause 5 사전인정", "Clause 5 사전인정" in doc and "None (Prequalified)" in doc)
         badges = await pg.eval_on_selector_all(".field .cat", "els => els.map(e => e.textContent.trim())")
         ok("배지 구성(필수14·추가필수1·비필수5)",
@@ -155,7 +156,7 @@ async def main():
         ok("와이어 지름·전류·전압 = 직접 입력",
            all(next(r for r in ui if r["id"] == f)["input"] == 1 for f in ["wireDia", "current", "voltage"]))
 
-        # 모든 근거 팝오버 — fill 버튼/Form J-2/양식 문구 0건, 입열량은 공식·조건만
+        # 모든 근거 팝오버 — 값 넣기 버튼/참조 양식/‘양식’ 문구 0건, 입열량은 공식·조건만
         pop_texts, fillbtns = {}, 0
         for fid in FIELD_ORDER:
             await pg.eval_on_selector(f'.field[data-fid="{fid}"]', "e => e.scrollIntoView({block:'center'})")
@@ -166,9 +167,9 @@ async def main():
             await pg.keyboard.press("Escape")
             await pg.wait_for_timeout(20)
         ok("팝오버 「이 값 넣기」 0건", fillbtns == 0, fillbtns)
-        bad_form = [k for k, v in pop_texts.items() if "Form J-2" in v or "제출하신 양식" in v]
+        bad_form = [k for k, v in pop_texts.items() if FORBIDDEN in v or "제출하신 양식" in v]
         bad_yang = [k for k, v in pop_texts.items() if "양식" in v]
-        ok("팝오버 Form J-2·제출 양식 문구 0건", not bad_form, bad_form)
+        ok("팝오버 참조 양식·제출 양식 문구 0건", not bad_form, bad_form)
         ok("팝오버 ‘양식’ 문구 0건", not bad_yang, bad_yang)
         heat = pop_texts["heatInput"]
         ok("입열량 팝오버 — 조건 제시", all(s in heat for s in ["29 V", "260 A", "300 mm/min"]))
@@ -213,7 +214,7 @@ async def main():
         score = await pg.inner_text(".res-score .n")
         ok("합격 100점(자유 입력 감점 없음)", score == "100", score)
         ok("합격 배지", "검사 통과" in await pg.inner_text(".res-badge"))
-        ok("합격 화면 — Form J-2 0건", "Form J-2" not in await pg.inner_text("#scene-result"))
+        ok("합격 화면 — 참조 양식 명칭 0건", FORBIDDEN not in await pg.inner_text("#scene-result"))
         await pg.wait_for_timeout(1200)
         ok("성공 효과음 재생", any("sfx_success" in u for u in audio), audio[-3:])
         await pg.screenshot(path=os.path.join(OUT, "07-pass.png"))

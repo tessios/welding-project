@@ -9,6 +9,7 @@
 import asyncio, os, time, json, sys
 from playwright.async_api import async_playwright
 
+FORBIDDEN = "Form " + "J-2"   # 화면에 남아 있으면 안 되는 참조 양식 명칭
 BASE = "https://tessios.github.io/welding-project/"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "screenshots", "live_v4")
@@ -80,7 +81,7 @@ async def main():
         await pg.screenshot(path=os.path.join(OUT, "01-landing.png"))
         body = await pg.inner_text("body")
         ok("라이브 표지 — ASTM A36", "ASTM A36" in body)
-        ok("라이브 표지 — 참조 양식 명칭 0건", "Form J-2" not in body)
+        ok("라이브 표지 — 참조 양식 명칭 0건", FORBIDDEN not in body)
 
         await pg.click("#btnStart")
         await pg.wait_for_timeout(2600)
@@ -103,7 +104,7 @@ async def main():
         ok("라이브 20칸", await pg.locator(".field").count() == 20, await pg.locator(".field").count())
         ok("「이 값 넣기」 0건", await pg.locator(".fill-btn").count() == 0)
         doc = await pg.inner_text("#wpsDoc")
-        ok("WPS 머리말 — 참조 양식 명칭 0건", "Form J-2" not in doc)
+        ok("WPS 머리말 — 참조 양식 명칭 0건", FORBIDDEN not in doc)
         ok("WPS 머리말 — Clause 5 사전인정", "Clause 5 사전인정" in doc)
         badges = await pg.eval_on_selector_all(".field .cat", "els => els.map(e => e.textContent.trim())")
         ok("배지(필수14·추가필수1·비필수5)",
@@ -118,7 +119,7 @@ async def main():
             await pg.click(f'.field[data-fid="{fid}"] .qm')
             await pg.wait_for_selector("#pop.on")
             txt = await pg.inner_text("#pop")
-            if "Form J-2" in txt or "양식" in txt or await pg.locator("#pop .fill-btn").count():
+            if FORBIDDEN in txt or "양식" in txt or await pg.locator("#pop .fill-btn").count():
                 bad.append(fid)
             if fid == "heatInput":
                 ok("입열량 — 조건·공식·정답 미노출",

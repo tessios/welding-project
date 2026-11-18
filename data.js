@@ -115,7 +115,7 @@ const FIELDS = [
   { id:'joint', sec:1, label:'이음 형식', en:'Joint Type', kind:'given', cat:'e', ui:'chips',
     options:['Fillet weld (T, Corner joint)','Groove weld (V, CJP)','Fillet weld (Lap joint)','Groove weld (V, PJP)'],
     pop:{ kind:'field', title:'도면 ST-401 / B-12 — 접합 상세', ref:'도면 지시',
-      body:'보 웨브에 브래킷을 직각으로 세워 붙입니다. 개선 없이 양면 필렛 6 mm 연속 — <b>Fillet weld (T, Corner joint)</b>에 해당하고, 사전인정 필렛 상세 번호는 <b>TC-F12-GF</b>입니다. 직각도는 <b>±10°</b> 안에서 관리합니다.',
+      body:'보 웨브에 브래킷을 직각으로 세워 붙입니다. 개선 없이 양면 필렛 6 mm 연속 — <b>Fillet weld (T, Corner joint)</b>에 해당합니다. 도면 상세 번호는 <b>TC-F12-GF</b>이고, 이 형상은 5.4.3과 Figure 5.3의 사전인정 T-joint 상세로 설명됩니다. 직각도는 <b>±10°</b> 안에서 관리합니다.',
       spec:{ ref:'AWS D1.1:2025 · 5.4.3 · Figure 5.3', quote:'5.4.3 Fillet Weld Details. See Table 7.7 for minimum fillet weld sizes and Figure 5.3 for prequalified fillet weld joint details.' } },
     answer:'Fillet weld (T, Corner joint)', weight:3,
     fb:'단면도를 다시 보세요. 웨브에 브래킷을 세운 T자 접합의 필렛이므로 맞대기(Groove)가 아닙니다.' },
