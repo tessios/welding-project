@@ -724,3 +724,14 @@ body.shake{animation:shakeIt .42s cubic-bezier(.36,.07,.19,.97)}
   .eyebrow{margin-bottom:18px}
   .hero-panel{padding:14px 14px 10px;border-radius:16px}
 }
+
+/* 전화 수신 대기 표시 */
+.ring-hint{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  height:100%;min-height:150px;color:var(--muted);font-size:13px;letter-spacing:.02em;
+}
+.ring-hint span:last-child{margin-left:6px}
+.rh-dot{width:6px;height:6px;border-radius:50%;background:var(--arc);opacity:.35;animation:rhPulse 1.4s ease-in-out infinite}
+.rh-dot:nth-child(2){animation-delay:.18s}
+.rh-dot:nth-child(3){animation-delay:.36s}
+@keyframes rhPulse{0%,100%{opacity:.25;transform:scale(.9)}50%{opacity:1;transform:scale(1.15)}}

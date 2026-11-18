@@ -90,6 +90,7 @@
 
     phone.classList.add('ringing');
     stateText.textContent = '수신 중';
+    dialog.innerHTML = `<div class="ring-hint" id="ringHint"><span class="rh-dot"></span><span class="rh-dot"></span><span class="rh-dot"></span><span>전화가 오고 있습니다</span></div>`;
 
     const addLine = item => {
       const el = document.createElement('div');
@@ -101,6 +102,7 @@
 
     function startTalk(){
       phone.classList.remove('ringing');
+      const rh = $('#ringHint', root); if(rh) rh.remove();
       stateText.textContent = '통화 중';
       const bars = document.createElement('span');
       bars.className = 'bar';
