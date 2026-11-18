@@ -232,7 +232,7 @@ const FIELDS = [
     pop:{ title:'강도·자세·가스까지 맞춘다', ref:'5.6 · Table 5.7', page:'65 · 105',
       h:'5.6 Filler Metal and Shielding Gas',
       quote:'Only filler metals listed in Table 5.7 may be used in prequalified WPSs. … Table 5.7, Group I/II — FCAW: E7XT-X, E7XT-XC, E7XT-XM (electrodes with the −2C, −2M, −3, −10, −13, −14, and −GS suffix shall be excluded …).',
-      ko:'사전인정 필러는 Table 5.7 등재 분류입니다. FCAW는 E7XT-X, E7XT-XC, E7XT-XM이 Group I·II에 해당합니다. 분류 기호에서 70은 490 MPa급 인장, T-1의 1은 전자세, 끝의 C는 100 % CO₂, M은 Ar 혼합입니다.',
+      ko:'사전인정 필러는 Table 5.7 등재 분류입니다. FCAW는 E7XT-X, E7XT-XC, E7XT-XM이 Group I·II에 해당합니다. 분류 기호에서 70은 480 MPa급(70 ksi) 인장, T-1의 1은 전자세, 끝의 C는 100 % CO₂, M은 Ar 혼합입니다.',
       site:'A36(Group I)에 E71T-1C는 Table 5.7 그대로 맞습니다. 반대로 E70T-1C는 아래보기·수평 전용이라 수직에서 비드가 흘러내립니다. 재고에 있다고 맞는 와이어가 아닙니다. 저수소 관리가 필요한 현장이라면 A5.20의 확산성 수소 지시자(−H4 등)를 붙인 제품으로 발주하는지도 확인합니다.',
       fill:'E71T-1C (A5.20)' },
     answer:'E71T-1C (A5.20)', weight:10, crit:true,
