@@ -452,8 +452,9 @@
                 <span class="sub">AWS D1.1/D1.1M:2025 · Carbon Steel · Fillet</span>
               </div>
               <div class="doc-no">
-                WPS No. <b>WPS-SM275-F01</b> · Rev. <b>0</b><br>
-                기준 규격 <b>AWS D1.1/D1.1M:2025</b> · Page 1 / 1<br>
+                WPS No. <b>WPS-A36-F01</b> · Rev. <b>0</b><br>
+                Supporting PQR(s) <b>None (Prequalified)</b> · CVN <b>No</b><br>
+                기준 규격 <b>AWS D1.1/D1.1M:2025</b> · 양식 <b>Form J-2</b> · Page 1 / 1<br>
                 작성 <b>${SCENARIO.meta.me}</b>
               </div>
             </div>
@@ -1052,7 +1053,7 @@
         <line x1="306" y1="150" x2="306" y2="228" stroke="#ff9a3c" stroke-width="1" opacity=".5"/>
       </g>
       <text x="312" y="246" fill="#ff9a3c" font-size="10" font-family="monospace">3F · FILLET 6</text>
-      <text x="250" y="392" fill="#6f7a87" font-size="9.5" font-family="monospace">SM275 · 12t</text>
+      <text x="250" y="392" fill="#6f7a87" font-size="9.5" font-family="monospace">ASTM A36 · 12t</text>
 
       ${mode === 'pass' ? `
         <g opacity=".95"><rect x="382" y="104" width="150" height="34" rx="4" fill="none" stroke="#4bd29a" stroke-width="1.4" transform="rotate(-6 457 121)"/>

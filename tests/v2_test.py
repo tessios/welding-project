@@ -13,30 +13,30 @@ OUT = os.path.join(ROOT, "screenshots", "v2")
 os.makedirs(OUT, exist_ok=True)
 
 ANSWERS = {
-    "joint": "T-joint · 양면 필렛",
+    "joint": "Fillet weld (T, Corner joint)",
     "backing": "Backing 없음 · Backgouging 없음",
     "rootGap": "1.5",
     "filletSize": "6",
-    "baseMetal": "KS D 3515 SM275",
-    "group": "Table 5.6 미등재",
-    "thickRange": "3 mm ~ 제한 없음",
-    "process": "FCAW-G",
+    "baseMetal": "ASTM A36 or Equivalent",
+    "group": "Group I",
+    "thickRange": "Fillet Welds < 75 mm",
+    "process": "FCAW (Semi-auto)",
     "polarity": "DC · DCEP (역극성)",
-    "wireCurrent": "Ø1.2 · 180–220 A · 23–27 V",
+    "wireCurrent": "Ø1.2 · 120–300 A · 28–30 V",
     "filler": "E71T-1C (A5.20)",
     "fano": "참고 F-6 / A-1",
-    "gas": "100% CO₂ · 15–25 L/min + 방풍",
-    "position": "3F · 수직 상진",
+    "gas": "100% CO₂ · 15–30 L/min · Nozzle #4",
+    "position": "All (F·V·H·OH) · 수직 상진",
     "preheat": "최소 20 °C · 층간 20 °C 이상",
-    "heatInput": "1.31",
+    "heatInput": "1.51",
     "pwht": "없음 (None)",
-    "prequal": "Qualified (Clause 6) — PQR-ST-012",
+    "prequal": "Prequalified (Clause 5) — PQR 없음",
 }
 WRONG = {
     "preheat": "예열 없음",
     "filler": "E70T-1C (A5.20)",
     "group": "Group II",
-    "prequal": "Prequalified (Clause 5)",
+    "position": "1F · 아래보기",
 }
 
 
@@ -104,6 +104,9 @@ async def main():
         await pg.goto(base, wait_until="load")
         await pg.wait_for_timeout(500)
         await pg.screenshot(path=os.path.join(OUT, "01-landing.png"))
+        body_txt = await pg.inner_text("body")
+        ok("표지 — ASTM A36 표기", "ASTM A36" in body_txt)
+        ok("SM275 잔여 표현 없음(표지)", "SM275" not in body_txt)
 
         # 오디오 파일 존재 확인
         files = ["bgm_terran.mp3", "n_call.mp3", "p01.mp3", "s03.mp3", "f01.mp3",
@@ -174,6 +177,11 @@ async def main():
         await pg.click("#btnToWps")
         await pg.wait_for_timeout(600)
         ok("18칸 렌더", await pg.locator(".field").count() == 18)
+        doc_head = await pg.inner_text("#wpsDoc .doc-head")
+        ok("Form J-2 · 사전인정 머리말", "Form J-2" in doc_head and "None (Prequalified)" in doc_head, doc_head.replace("\n", " / "))
+        pos_opts = await pg.eval_on_selector_all('.field[data-fid="position"] .chip', "els => els.map(e => e.dataset.val)")
+        ok("자세 정답에 All 포함", any(o.startswith("All") for o in pos_opts), str(pos_opts))
+        ok("SM275 잔여 표현 없음(WPS)", "SM275" not in await pg.inner_text("#wpsDoc"))
         badges = await pg.eval_on_selector_all(".field .cat", "els => els.map(e => e.textContent.trim())")
         ok("전 항목 필수/추가필수/비필수 배지", len(badges) == 18 and set(badges) == {"필수", "추가필수", "비필수"},
            str(sorted(set(badges))))
@@ -213,6 +221,7 @@ async def main():
         score = await pg.inner_text(".res-score .n")
         ok("합격 100점", score == "100", score)
         ok("합격 배지", "검사 통과" in await pg.inner_text(".res-badge"))
+        ok("SM275 잔여 표현 없음(결과)", "SM275" not in await pg.inner_text("#scene-result"))
         await pg.wait_for_timeout(1600)
         await pg.screenshot(path=os.path.join(OUT, "08-pass.png"))
 
