@@ -6,8 +6,8 @@ Approved by ANSI March 19, 2025, "Revises AWS D1.1/D1.1M:2020").
 Clause 5·6·7 본문, 해당 표, **Annex J(Informative) 샘플 양식**을 직접 확인했습니다. 아래 인용은 2025년판 원문 발췌입니다.
 
 > 교육용 앱이므로 인물·회사·도면·WPS 번호와 12 mm 두께 등 일부 수치는 익명·가상입니다.
-> 조항·표 번호와 규정 문구는 2025년판을 그대로 따랐고, **강종·양식 값은 실제 작성한 `Form J-2`를 대조해 옮겼습니다**
-> (→ `Form_J-2_검토메모.md`).
+> 조항·표 번호와 규정 문구는 2025년판을 그대로 따랐고, **강종·설계 값은 A36 필렛 WPS 작성 사례와 대조해 옮겼습니다**
+> (→ `AnnexJ_사전인정_검토메모.md`).
 
 ---
 
@@ -22,7 +22,7 @@ Clause 5·6·7 본문, 해당 표, **Annex J(Informative) 샘플 양식**을 직
 | Table 6.2 (두께) | 유지 | CJP Groove Welds: Range of Thickness Qualified |
 | Table 7.7 (최소 각장) | 유지 | Minimum Fillet Weld Sizes |
 | Table 5.1 (FCAW 변수) | **Table 5.5** | Essential Variables for Prequalified WPSs (1)~(31) |
-| — | **Annex J · Form J-2** | Prequalified WPS 기록 양식. J2 — “J2 is sufficient for the purpose of documenting prequalified WPSs.” |
+| — | **Annex J · J2** | 사전인정 WPS 기록 요건. J2 — “J2 is sufficient for the purpose of documenting prequalified WPSs.” |
 
 2025년판 Clause 5 구성(5.1 Scope ~ 5.9 PWHT):
 
@@ -46,8 +46,8 @@ Clause 5·6·7 본문, 해당 표, **Annex J(Informative) 샘플 양식**을 직
 | **I** | ASTM A36 | **≤ 3/4 in [20 mm]** · Fy 36 ksi [250 MPa] |
 | **II** | ASTM A36 | **All thicknesses** |
 
-즉 12 mm A36은 Group I, 20 mm를 넘는 A36은 Group II입니다. 실제 `Form J-2`가 Group No.를
-**“I, II”** 로 적은 이유가 이것이며(75 mm까지 한 장으로 덮기 위해), 12 mm 개소만 다룰 때는 Group I로 충분합니다.
+즉 12 mm A36은 Group I, 20 mm를 넘는 A36은 Group II입니다. 사내 A36 필렛 WPS가 Group No.를
+**“I, II”** 로 적는 이유가 이것이며(75 mm까지 한 장으로 덮기 위해), 12 mm 개소만 다룰 때는 Group I로 충분합니다.
 
 ---
 
@@ -73,12 +73,12 @@ size of fillet by the amount of separation.”
 | 2 mm 초과 ~ 5 mm | 허용 | 초과량만큼 각장 증가(6 → 8 mm 등) |
 | 5 mm 초과 | 용접 불가 | 이음 재조정(후판 75 mm 이상은 받침 사용 시 8 mm까지) |
 
-`Form J-2`의 Sketch도 **As detailed R = 0 (+2/−0), As fit-up max 5** 로 같은 구조입니다.
+사전인정 필렛 WPS의 Sketch도 **As detailed R = 0 (+2/−0), As fit-up max 5** 로 같은 구조입니다.
 앱은 현장 실측 1.5 mm를 기본값으로 두고, 정답 범위 0~2 mm, 해설에서 2~5 mm 보정 규칙을 설명합니다.
 
 ---
 
-## 4. 18칸 — 원문 근거와 변수 분류
+## 4. 20칸 — 원문 근거와 변수 분류
 
 | 칸 | 원문 근거 | 분류 | 핵심 문구 / 앱 정답 |
 |---|---|---|---|
@@ -88,15 +88,15 @@ size of fillet by the amount of separation.”
 | 필렛 각장 | 7.13 · Table 7.7 | 필수 | “minimum … as shown in Table 7.7 … unless the design drawings specify welds of a larger size.” · **6 mm** |
 | 모재 규격 | 5.3 · Table 5.6 | 필수 | “Only base metals listed in Table 5.6 may be used in prequalified WPSs.” · **ASTM A36 or Equivalent** |
 | 모재 Group | 5.3 · Table 5.6 | 필수(치명) | A36 = Group I(≤20 mm) / Group II(전 두께) · **Group I** |
-| 인정 두께 범위 | Annex J Form J-2 · Table 5.6 · 7.21.1 | 필수 | **Fillet Welds < 75 mm** (양식 관리 상한) |
+| 인정 두께 범위 | Annex J J2 · Table 5.6 · 7.21.1 | 필수 | **Fillet Welds < 75 mm** (사내 관리 상한) |
 | 용접 공정 | 5.5.1 | 필수 | FCAW 사전인정 · **FCAW (Semi-auto)** |
 | 전류·극성 | Table 5.5 (13)(14) · Table 6.6 (12) | 필수(치명) | 극성 변경 = 재인정 · **DC · DCEP** |
-| 와이어 Ø·전류·전압 | Table 5.5 (7)(10)(11)(22)(23) · Form J-2 | 비필수(허용폭) | 지름별 전류표 · **Ø1.2 · 120–300 A · 28–30 V** |
+| 와이어 Ø / 전류 / 전압 | Table 5.5 (7)(10)(11)(22)(23) | 비필수(허용폭) | 세 칸 모두 **직접 입력** · 어떤 유효값/범위든 통과 · 참고 1.2Ø 120–300 A · 28–30 V |
 | 필러 분류 | 5.6 · Table 5.7 | 필수(치명) | E7XT-XC 등재, E70T-1C는 수직 부적합 · **E71T-1C (A5.20)** |
 | F-No./A-No. | Table 5.5 (5) | 비필수 | D1.1은 AWS A5.X 분류 사용 · 참고 F-6 / A-1 또는 N/A |
 | 차폐가스 | 5.6.4 · Table 5.5 (17)(18) | 필수(치명) | C = 100 % CO₂ · **100 % CO₂ · 15–30 L/min · Nozzle #4** |
 | 자세·진행 | 5.8.1.1 · Table 5.5 (2) | 필수(치명) | “progression … shall be upward” · **All · 수직 상진** |
-| 예열·층간 | 5.7.1 · Table 5.11 주 a | 필수(치명) | 모재 0 °C 미만 → 20 °C 예열, 층간 유지 · **최소 20 °C** |
+| 예열 온도 | 5.7.1 · Table 5.11 주 a | 필수(치명) | 모재 0 °C 미만 → 20 °C 예열, 층간 유지 · **직접 입력 20 °C** |
 | 입열량 | Table 6.8 (10) · 6.8.5 | **추가필수** | CVN 시에만 재인정 대상, H = 60·E·I ÷ v · **1.51 kJ/mm** |
 | PWHT | 5.9 · Table 5.5 (21) | 필수 | 도면·계약 요구 없으면 None · **없음 (None)** |
 | 인정 방식 | 5.1 · 6.2.1 · Annex J J2 | 필수 | Table 5.6 등재 → 시험 면제 · **Prequalified (Clause 5) — PQR 없음** |
@@ -107,7 +107,7 @@ size of fillet by the amount of separation.”
   preheated to a minimum of 70 °F [20 °C] and the minimum interpass temperature shall be maintained
   during welding.” → 내일 07시 −3 °C 시나리오의 정답 20 °C.
 - **Table 5.11 Category B(저수소 공정 · FCAW)**: 3~20 mm **0 °C** / 20~38 mm **10 °C** / 38~65 mm **65 °C** /
-  65 mm 초과 **110 °C**. `Form J-2`의 예열 기재값과 일치.
+  65 mm 초과 **110 °C**. 사내 A36 필렛 WPS의 예열 기재값과 일치.
 - **최소 각장**: Table 7.7 — T<6 mm 3 mm(반복하중 5 mm), 6~12 mm 5 mm, 12~20 mm 6 mm, 20 mm 초과 8 mm.
   본 시나리오 12 mm는 6 mm 구간이므로 도면 지시 6 mm가 최소치를 만족. (7.13: 도면이 더 큰 값을 지시하면 도면을 따름)
 - **수직 상진**: 5.8.1.1 — “The progression for all passes in vertical position welding shall be upward …”
@@ -131,33 +131,33 @@ size of fillet by the amount of separation.”
 | 파일 | 내용 | 생성 |
 |---|---|---|
 | `bgm_terran.mp3` | 인더스트리얼 루프 40초(BPM 96, Em–C–G–D). 테란풍 분위기만 참고한 **오리지널** 작곡 | `tools/make_bgm.py` (numpy 합성) |
-| `n_call`, `n_summary`, `n_brief`, `n_wps`, `n_pass`, `n_fail`, `n_cause_*` | 아나운서 톤 내레이션·핵심 안내·사고 원인 요약 | `ko-KR-SunHiNeural`, `tools/make_audio.py` |
-| `p00`~`p09` | 현장 시공팀장·이프로 통화 (전화기 대역 제한) | `ko-KR-InJoonNeural` / `ko-KR-HyunsuMultilingualNeural` + highpass·lowpass·compressor |
-| `s01`~`s03` | 합격 다음 날 통화 | 상동 |
-| `f01`, `f02` | 불합격 급박 대사 | 상동(속도 +12 %, 피치 +4 Hz) |
+| `n_call`, `n_summary`, `n_brief`, `n_wps`, `n_pass`, `n_end_pass`, `n_fail`, `n_end_fail`, `n_cause_*` | 아나운서 톤 내레이션·핵심 안내·사고 원인·엔딩 정리 | `ko-KR-SunHiNeural`, `tools/make_audio.py` |
+| — | 인물 통화 음성(p/s/f)은 **전부 제거** — 대화는 화면 자막·말풍선으로만 진행 | — |
 | `sfx_ring` | 전화벨(440+480 Hz, 1초 울림/2초 정지 ×3) | numpy 합성 |
 | `sfx_crack` | 금속 파단 크랙 | numpy 합성 |
 | `sfx_collapse` | 철골 붕괴 럼블·파편 4.6초 | numpy 합성 |
 | `sfx_hangup` | 수화기 내려놓기 | numpy 합성 |
+| `sfx_success` | 합격 차임(두 음 상승 + 금속 잔향 1.9초) | numpy 합성 |
 
 **발음·톤 검수**: 모든 대본은 숫자·약어를 한국어 발음으로 적고(`WPS`→“더블유 피 에스”, `PQR`→“피 큐 알”,
 `ASTM A36`→“에이에스티엠 에이 삼십육”, `CO₂`→“씨 오 투”, `AWS D1.1`→“에이더블유에스 디 원 점 원”), 앞뒤 무음을 제거한 뒤
 페이드·톤 필터·loudnorm(-16 LUFS)을 적용했습니다.
 
-2026-11-18 A36·Form J-2 반영으로 대본 4개(`n_summary`, `n_brief`, `p04`, `s02`)를 다시 합성하고
-faster-whisper로 재전사해 강종 표기와 문장 일치를 확인했습니다(전사 결과: `docs/audio_transcript.json`).
-이번 검수는 메모리 제약으로 **tiny-int8(CPU 1스레드)** 모델을 사용했고, 그 밖의 클립은 이전 small-int8 전사 기록을 유지합니다.
+2026-11-18 4차 개편에서 아나운서 대본 13개를 새로 합성하고 **faster-whisper small-int8**(CPU 1스레드, `CT2_USE_MKL=0`)로
+전수 전사해 문장 일치율(`match`)을 함께 남겼습니다(→ `docs/audio_transcript.json`). 13개 중 11개가 0.92 이상,
+나머지 2개(n_brief 0.74 · n_wps 0.84)는 고유명사·숫자 표기 차이이며 들리는 문장은 대본과 같습니다.
 
 ---
 
 ## 6. 앱 동작
 
-- `[시작 →]` 클릭 → 배경음악 시작(0.15) → 아나운서 안내(음성 중 0.04로 덕킹) → 전화벨 → 통화 10줄 순차 재생.
+- `[시작 →]` 클릭 → 배경음악 시작(0.15) → 전화벨 + 아나운서 안내(음성 중 0.04로 덕킹) → 통화 10줄이 자막으로 순차 표시.
 - 상단 바: `BGM` 켜기/끄기, `소리 켜짐/꺼짐`(전체 음소거). 설정은 localStorage에 유지.
 - 주황 점(규격 근거) 팝오버: 아이보리 규격서 카드(2025 판본·조항·쪽 표기 + 영문 원문 + 표 발췌) 아래에
   **한글 해석**과 **현장 의미**를 배치.
-- WPS 화면 머리말: `WPS-A36-F01` · **Supporting PQR(s) None (Prequalified)** · **CVN No** · 양식 **Form J-2**.
-- 「이 값 넣기」: input·chip 모두 실제 반영, 작성 카운트·트레이(✓) 즉시 갱신.
-- 팝오버는 칸 좌/우에 붙고, 좁은 화면에서는 제출 바 위 시트로 열립니다(제출 바를 가리지 않음).
+- WPS 화면 머리말: `WPS-A36-F01` · **Supporting PQR(s) None (Prequalified)** · **CVN No** · **Clause 5 사전인정**.
+- 선택형(chips 14칸·select 3칸)과 직접 입력형(input 3칸+수치 3칸)으로만 구성 — 값을 대신 넣어 주는 버튼은 없습니다.
+- 근거는 **문항 카드/라벨을 누르면** 열리고, **더블클릭(모바일 더블탭)·× 버튼**으로 닫힙니다. 입력·선택 조작 중에는 열리지 않습니다.
+- 모바일(390×844)에서는 근거가 화면 높이의 약 46 % 이하 컴팩트 시트로 열리고 내부 스크롤되며, 제출 바를 가리지 않습니다.
 - 불합격: 기둥 좌굴 → 보·브래킷 낙하 → 파단 스파크 → 화면 진동 → 먼지 → 잔해·붕괴 스탬프,
-  크랙·붕괴 효과음과 급박 대사·원인 내레이션이 함께 재생됩니다.
+  크랙·붕괴 효과음과 원인·엔딩 내레이션이 함께 재생됩니다(인물 음성 없음).

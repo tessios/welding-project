@@ -279,12 +279,13 @@
     };
 
     async function run(){
+      /* 벨은 장면이 열리면 바로 울리고, 아나운서가 상황을 설명한다 */
+      AU.fx('sfx_ring', .55);
       await narrate('n_call', seq);
       if(!alive(seq)) return;
 
       /* 벨 → 수화 */
-      AU.fx('sfx_ring', .9);
-      await wait(2600);
+      await wait(700);
       if(!alive(seq)) return;
 
       phone.classList.remove('ringing');
@@ -295,16 +296,13 @@
       bars.innerHTML = '<i></i><i></i><i></i><i></i>';
       $('#callState', root).appendChild(bars);
 
+      /* 통화 음성 없이 자막으로만 진행 — 문장 길이에 맞춰 말풍선이 차례로 쌓인다 */
       for(const item of SCENARIO.call){
         if(!alive(seq)) return;
         addLine(item);
         const plain = item.t.replace(/<[^>]+>/g, '');
-        const minMs = Math.max(800, Math.min(2600, 420 + plain.length * 42));
-        const started = Date.now();
-        const ok = await AU.clip(item.a);
-        const spent = Date.now() - started;
-        if(!alive(seq)) return;
-        if(!ok || spent < minMs) await wait(Math.max(120, minMs - spent));
+        const minMs = Math.max(700, Math.min(3200, 420 + plain.length * 48));
+        await wait(minMs);
       }
 
       AU.fx('sfx_hangup', .7);
@@ -429,7 +427,7 @@
           <div>
             <div class="scene-kicker">장면 3 · 작성</div>
             <h2 class="scene-title">빈 WPS 한 장</h2>
-            <p class="scene-sub">칸을 누르거나 마우스를 올리면 근거가 뜹니다. <b class="hl-blue">파란 점</b>은 현장 정보, <b class="hl-amber">주황 점</b>은 AWS D1.1 2025년판 원문입니다. ⭐는 감리가 먼저 보는 칸.</p>
+            <p class="scene-sub">칸을 누르면 근거가 열리고, 근거를 두 번 누르면 닫힙니다. 보기는 고르고, 수치는 직접 계산해 적으세요. <b class="hl-blue">파란 점</b>은 현장 정보, <b class="hl-amber">주황 점</b>은 AWS D1.1 2025년판 원문입니다. ⭐는 감리가 먼저 보는 칸.</p>
           </div>
           <div class="tray" id="tray" aria-label="놓친 정보">
             <span class="tray-k">놓친 정보</span>
@@ -454,13 +452,13 @@
               <div class="doc-no">
                 WPS No. <b>WPS-A36-F01</b> · Rev. <b>0</b><br>
                 Supporting PQR(s) <b>None (Prequalified)</b> · CVN <b>No</b><br>
-                기준 규격 <b>AWS D1.1/D1.1M:2025</b> · 양식 <b>Form J-2</b> · Page 1 / 1<br>
+                기준 규격 <b>AWS D1.1/D1.1M:2025</b> · Clause 5 사전인정 · Page 1 / 1<br>
                 작성 <b>${SCENARIO.meta.me}</b>
               </div>
             </div>
             ${secHTML}
             <div class="doc-foot">
-              <div>교육용 양식입니다. 조항·표 번호와 영문 인용은 2025년판 원문을 따랐고, 수치는 교육용 대표값입니다.<br>실제 제작에는 계약 지정 판본과 발주처 시방서를 적용하세요.</div>
+              <div>교육용으로 재구성한 서식입니다. 조항·표 번호와 영문 인용은 AWS D1.1/D1.1M:2025 원문을 따랐고, 수치는 교육용 대표값입니다.<br>실제 제작에는 계약 지정 판본과 발주처 시방서를 적용하세요.</div>
               <div class="sig">
                 <div><span class="k">Prepared</span><span class="v">${SCENARIO.meta.me}</span></div>
                 <div><span class="k">Reviewed</span><span class="v">—</span></div>
@@ -497,9 +495,14 @@
       ctl = `<div class="chip-row" data-field="${f.id}">` + f.options.map(o =>
         `<button type="button" class="chip${filled === o ? ' on' : ''}" data-val="${esc(o)}">${esc(o)}</button>`
       ).join('') + `</div>`;
+    } else if(f.ui === 'select'){
+      ctl = `<select data-field="${f.id}" aria-label="${esc(f.label)} 보기 선택">
+        <option value="">— 보기에서 선택 —</option>` +
+        f.options.map(o => `<option value="${esc(o)}"${filled === o ? ' selected' : ''}>${esc(o)}</option>`).join('') +
+        `</select>`;
     } else {
       ctl = `<div class="${f.unit ? 'has-unit' : ''}">
-        <input type="${f.ui === 'number' ? 'number' : 'text'}" ${f.ui === 'number' ? 'step="0.01" inputmode="decimal"' : ''}
+        <input type="${f.ui === 'number' ? 'number' : 'text'}" ${f.ui === 'number' ? 'step="0.01"' : ''} ${f.decimal || f.ui === 'number' ? 'inputmode="decimal"' : ''}
           data-field="${f.id}" placeholder="${esc(f.ph || '')}"${filled ? ` value="${esc(filled)}"` : ''}
           autocomplete="off" spellcheck="false">
         ${f.unit ? `<span class="unit">${f.unit}</span>` : ''}
@@ -519,13 +522,19 @@
   }
 
   function initFields(root){
+    const acceptValue = t => {
+      state.answers[t.dataset.field] = t.value;
+      t.closest('.field').classList.remove('missing','bad');
+      closePop();
+      updateFillCount();
+    };
     root.addEventListener('input', e => {
       const t = e.target;
-      if(t.matches('input[data-field]')){
-        state.answers[t.dataset.field] = t.value;
-        t.closest('.field').classList.remove('missing','bad');
-        updateFillCount();
-      }
+      if(t.matches('input[data-field], select[data-field]')) acceptValue(t);
+    });
+    root.addEventListener('change', e => {
+      const t = e.target;
+      if(t.matches('select[data-field]')) acceptValue(t);
     });
 
     root.addEventListener('click', e => {
@@ -536,6 +545,7 @@
         chip.classList.add('on');
         state.answers[row.dataset.field] = chip.dataset.val;
         chip.closest('.field').classList.remove('missing','bad');
+        closePop();
         updateFillCount();
         return;
       }
@@ -546,11 +556,10 @@
     $$('.field', root).forEach(el => {
       const f = FIELDS.find(x => x.id === el.dataset.fid);
       if(!f) return;
-      el.addEventListener('mouseenter', () => { if(CAN_HOVER) openPop(el, f); });
-      el.addEventListener('mouseleave', () => { if(CAN_HOVER) scheduleClose(); });
-      el.addEventListener('focusin',  () => openPop(el, f));
+      /* 근거는 호버가 아니라 문항을 눌렀을 때 열린다(입력·선택 조작 방해 금지) */
+      /* 문항 카드·라벨을 누르면 근거가 열린다. input·select·칩 조작은 방해하지 않는다. */
       el.addEventListener('click', e => {
-        if(e.target.closest('input, .chip, .qm')) return;
+        if(e.target.closest('input, select, option, .chip, .qm')) return;
         openPop(el, f, true);
       });
       const qm = $('.qm', el);
@@ -591,11 +600,8 @@
     </div>`;
   }
 
-  function fillBtn(f){
-    if(!f.pop.fill) return '';
-    const label = f.pop.fill.length > 26 ? f.pop.fill.slice(0, 25) + '…' : f.pop.fill;
-    return `<button class="fill-btn" type="button" data-fill="${f.id}">
-      <span class="fb-k">이 값 넣기</span><span class="fb-v">${esc(label)}</span></button>`;
+  function closeBtnHTML(){
+    return `<button class="pop-x" type="button" aria-label="근거 닫기" title="닫기 (두 번 눌러도 닫힙니다)">×</button>`;
   }
 
   function openPop(el, f, pinned){
@@ -616,18 +622,21 @@
         <h4>${p.title}</h4>
         <p>${p.body}</p>
         ${p.spec ? specCard(p.spec, true) : ''}
-        ${fillBtn(f)}`;
+        ${p.calc ? calcBox(p.calc) : ''}
+        ${closeBtnHTML()}`;
     } else {
       pop.innerHTML = `
         ${specCard(p)}
         <div class="pop-ko">
           <div class="kh">한글 해석</div>
           <p>${p.ko}</p>
+          ${p.calc ? calcBox(p.calc) : ''}
           <div class="kh site">현장 의미</div>
           <p>${p.site}</p>
         </div>
-        ${fillBtn(f)}`;
+        ${closeBtnHTML()}`;
     }
+    bindPopClose();
     pop.hidden = false;
     pop.classList.remove('on');
     requestAnimationFrame(() => {
@@ -646,10 +655,12 @@
 
     pop.style.maxHeight = '';
     if(mobile){
+      /* 모바일: 화면을 덮지 않는 컴팩트 시트 — 높이를 줄이고 내부 스크롤 */
       pop.classList.add('sheet');
       pop.style.left = pop.style.top = pop.style.width = '';
-      pop.style.setProperty('--sheet-bottom', (barH + 14) + 'px');
-      pop.style.maxHeight = Math.max(200, vh - barH - 96) + 'px';
+      pop.style.setProperty('--sheet-bottom', (barH + 12) + 'px');
+      const cap = Math.max(160, Math.min(vh * 0.42, vh - barH - 180));
+      pop.style.maxHeight = cap + 'px';
       return;
     }
     pop.classList.remove('sheet');
@@ -682,46 +693,40 @@
     if(ph > maxH) pop.style.maxHeight = Math.max(180, maxH) + 'px';
   }
 
-  /* 값 넣기 — input · chip 모두 실제 반영 */
-  function applyFill(fid){
-    const f = FIELDS.find(x => x.id === fid);
-    if(!f || !f.pop.fill) return;
-    const field = $(`.field[data-fid="${fid}"]`);
-    if(!field) return;
-    const val = f.pop.fill;
-
-    if(f.ui === 'chips'){
-      const chip = $$('.chip', field).find(c => c.dataset.val === val);
-      if(chip){ chip.click(); }
-      else { state.answers[fid] = val; updateFillCount(); }
-    } else {
-      const inp = $('input', field);
-      if(inp){
-        inp.value = val;
-        state.answers[fid] = val;
-        inp.dispatchEvent(new Event('input', {bubbles:true}));
-      }
-    }
-    field.classList.remove('missing','bad');
-    field.classList.add('filled');
-    setTimeout(() => field.classList.remove('filled'), 1200);
-    updateFillCount();
-
-    const btn = $('.fill-btn', pop);
-    if(btn){
-      btn.classList.add('done');
-      btn.querySelector('.fb-k').textContent = '✓ 들어갔습니다';
-      btn.querySelector('.fb-v').textContent = val;
-    }
-    if(window.innerWidth < 780) setTimeout(closePop, 420);
+  /* 계산 조건 박스 — 정답을 넣어주지 않고 조건·공식만 보여준다 */
+  function calcBox(calc){
+    return `<div class="calc-box">
+      <div class="cb-h">${esc(calc.cap || '계산 조건')}</div>
+      <table class="calc-table"><tbody>${
+        calc.rows.map(r => `<tr><th>${esc(r[0])}</th><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table>
+      ${calc.note ? `<div class="cb-note">${esc(calc.note)}</div>` : ''}
+    </div>`;
   }
+
+  /* 근거 닫기 — 더블클릭 · 모바일 더블탭 · × 버튼 */
+  let lastTap = 0;
+  function bindPopClose(){
+    const x = $('.pop-x', pop);
+    if(x) x.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); closePop(); });
+  }
+  function dblClose(e){
+    if(pop.hidden) return;
+    /* 더블클릭은 텍스트 선택을 남기지 않도록 막는다 */
+    const sel = window.getSelection && window.getSelection();
+    if(sel && sel.removeAllRanges) sel.removeAllRanges();
+    e.preventDefault();
+    closePop();
+  }
+  pop.addEventListener('dblclick', dblClose);
+  pop.addEventListener('touchend', e => {
+    if(pop.hidden) return;
+    const now = Date.now();
+    if(now - lastTap < 340){ e.preventDefault(); closePop(); lastTap = 0; }
+    else lastTap = now;
+  }, {passive:false});
 
   pop.addEventListener('mouseenter', () => clearTimeout(popTimer));
   pop.addEventListener('mouseleave', () => { if(CAN_HOVER) scheduleClose(); });
-  pop.addEventListener('click', e => {
-    const b = e.target.closest('.fill-btn');
-    if(b && !b.classList.contains('done')){ e.preventDefault(); applyFill(b.dataset.fill); }
-  });
   document.addEventListener('click', e => {
     if(pop.hidden) return;
     if(e.target.closest('#pop') || e.target.closest('.field')) return;
@@ -767,7 +772,12 @@
 
   function checkField(f, val){
     if(val === undefined || String(val).trim() === '') return false;
-    if(f.ui === 'chips') return Array.isArray(f.answer) ? f.answer.includes(val) : val === f.answer;
+    /* 자유 입력(와이어 지름·전류·전압) — 유효한 수치나 범위가 있으면 통과 */
+    if(f.lenient){
+      const nums = String(val).match(/\d+(?:[.,]\d+)?/g);
+      return !!nums && nums.some(n => parseFloat(String(n).replace(',', '.')) > 0);
+    }
+    if(f.ui === 'chips' || f.ui === 'select') return Array.isArray(f.answer) ? f.answer.includes(val) : val === f.answer;
     if(f.ui === 'number'){
       const n = parseFloat(String(val).replace(',', '.'));
       if(isNaN(n)) return false;
@@ -854,7 +864,7 @@
           <div class="res-badge ok">● 검사 통과</div>
           <div class="res-score"><span class="n">${score}</span><span class="d">/ 100</span></div>
           <h2 class="res-title">이 한 장으로 현장이 움직였습니다</h2>
-          <p class="res-sub">치명 오류 0건${soft.length ? ` · 보완 권고 ${soft.length}건` : ''}. 이프로의 절차서로 용접이 진행됐고, 다음 날 전화가 다시 옵니다.</p>
+          <p class="res-sub">치명 오류 0건${soft.length ? ` · 보완 권고 ${soft.length}건` : ''}. 이프로의 절차서로 용접이 진행됐고, 다음 날 현장 기록이 도착합니다.</p>
           <div class="thanks-call">
             <div class="ct"><div class="av">박</div>
               <div class="who"><b>${SCENARIO.meta.caller}</b><span>${SCENARIO.meta.callerRole} · 다음 날 16:20</span></div></div>
@@ -868,20 +878,26 @@
         </div></div></div>`;
 
       (async () => {
-        await narrate('n_pass', seq);
-        if(!alive(seq)) return;
+        AU.fx('sfx_success', .55);
+        /* 말풍선은 내레이션과 동시에 차례로 쌓아 빈 상자를 남기지 않는다 */
         const box = $('#thanksLines', root);
-        for(const l of SCENARIO.successCall){
-          if(!alive(seq)) return;
-          const p = document.createElement('div');
-          p.className = 'say' + (l.strong ? ' strong' : '');
-          p.innerHTML = `<b>${l.who}</b> ${l.t}`;
-          box.appendChild(p);
-          requestAnimationFrame(() => p.classList.add('in'));
-          await AU.clip(l.a);
-          if(!alive(seq)) return;
-          await wait(320);
-        }
+        const bubbles = (async () => {
+          for(const l of SCENARIO.successLog){
+            if(!alive(seq)) return;
+            const p = document.createElement('div');
+            p.className = 'say';
+            p.innerHTML = `<b>${esc(l.who)}</b><span class="msg-time">${esc(l.time || '')}</span> ${l.t}`;
+            box.appendChild(p);
+            requestAnimationFrame(() => p.classList.add('in'));
+            await wait(Math.max(900, Math.min(2600, 420 + l.t.length * 38)));
+          }
+        })();
+        await narrate('n_pass', seq);
+        await bubbles;
+        if(!alive(seq)) return;
+        await wait(300);
+        if(!alive(seq)) return;
+        await narrate('n_end_pass', seq);
       })();
     } else {
       root.innerHTML = `<div class="res-wrap"><div class="res-grid">
@@ -950,20 +966,21 @@
       await wait(1500);
       if(!alive(seq)) return;
       const box = $('#failLines', root);
-      for(const l of SCENARIO.failCall){
+      for(const l of SCENARIO.failLog){
         if(!alive(seq)) return;
         const p = document.createElement('div');
         p.className = 'say alert';
-        p.innerHTML = `<b>${l.who}</b> ${l.t}`;
+        p.innerHTML = `<b>${esc(l.who)}</b><span class="msg-time">${esc(l.time || '')}</span> ${l.t}`;
         box.appendChild(p);
         requestAnimationFrame(() => p.classList.add('in'));
-        await AU.clip(l.a);
-        await wait(240);
+        await wait(Math.max(800, Math.min(2400, 420 + l.t.length * 40)));
       }
       if(!alive(seq)) return;
       await narrate('n_fail', seq);
       if(!alive(seq)) return;
       await narrate(ft.cause || 'n_cause_reject', seq);
+      if(!alive(seq)) return;
+      await narrate('n_end_fail', seq);
     })();
 
     later(() => {
