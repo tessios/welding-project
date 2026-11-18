@@ -3,9 +3,9 @@ from playwright.async_api import async_playwright
 ANSWERS = {
   "joint":"T-joint · 양면 필렛","backing":"Backing 없음 · Backgouging 없음","rootGap":"2","filletSize":"6",
   "baseMetal":"KS D 3515 SM275","group":"Table 5.3 미등재","thickRange":"3 mm ~ 제한 없음","process":"FCAW-G",
-  "polarity":"DC · DCEP (역극성)","wireCurrent":"Ø1.2 mm · 200 A · 25 V","filler":"E71T-1C (A5.20)",
+  "polarity":"DC · DCEP (역극성)","wireCurrent":"Ø1.2 · 180–220 A · 23–27 V","filler":"E71T-1C (A5.20)",
   "fano":"참고 F-6 / A-1","gas":"100% CO₂ · 15–25 L/min + 방풍","position":"3F · 수직 상진",
-  "preheat":"최소 20 °C · 층간 20 °C 이상","heatInput":"1.2","pwht":"없음 (None)",
+  "preheat":"최소 20 °C · 층간 20 °C 이상","heatInput":"1.31","pwht":"없음 (None)",
   "prequal":"Qualified (Clause 6) — PQR-ST-012"}
 async def fill(pg, m):
     for k,v in m.items():

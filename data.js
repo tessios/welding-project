@@ -67,7 +67,7 @@ const BRIEF = {
     { icon:'🌡', title:'내일 날씨 예보', short:'07시 −3 °C · 서풍 3~4 m/s',
       body:'내일 07시 기온 <b>−3 °C</b>, 서풍 3~4 m/s, 습도 68 %. 오전에는 서리가 예상됩니다. (강수 없음)' },
     { icon:'📁', title:'사내 PQR 목록', short:'PQR-ST-012 · SM275 확인',
-      body:'<b>PQR-ST-012</b> — SM275, 시험판 25 mm, FCAW-G, E71T-1C(100 % CO₂), DCEP, <b>3G 상진</b> CJP 맞대기, 시험 합격 (2년 전).<br>이 밖에 PQR-A36-04(A36), PQR-SS400-07(SS400)이 있습니다.' },
+      body:'<b>PQR-ST-012</b> — SM275, 시험판 25 mm, FCAW-G, E71T-1C(100 % CO₂), DCEP, <b>3G 상진</b> CJP 맞대기, 합격 (2년 전).<br>기록값: Ø1.2 mm · <b>210 A · 26 V · 250 mm/min</b> · CO₂ 20 L/min · 예열 20 °C.<br>이 밖에 PQR-A36-04(A36), PQR-SS400-07(SS400)이 있습니다.' },
     { icon:'🧰', title:'현장 장비·자재 재고', short:'E71T-1C Ø1.2 / E70T-1C Ø1.6',
       body:'CO₂ 반자동 용접기(DC). 와이어 재고: <b>E71T-1C Ø1.2 mm</b>, E70T-1C Ø1.6 mm.<br><span style="color:#ffbd83">E70T-1C는 아래보기·수평 전용 분류</span>입니다. 수직에 쓰면 비드가 흘러내립니다.' }
   ]
@@ -150,12 +150,12 @@ const FIELDS = [
     fb:'DCEN은 T-1 계열에 맞지 않습니다. 아크가 불안정해지고 기공·융합 불량이 생깁니다.' },
 
   { id:'wireCurrent', sec:3, label:'와이어 지름 · 전류 · 전압', en:'Electrode Ø / A / V', kind:'ask', ui:'chips',
-    options:['Ø1.2 mm · 200 A · 25 V','Ø1.6 mm · 260 A · 28 V','Ø1.2 mm · 300 A · 32 V'],
+    options:['Ø1.2 · 180–220 A · 23–27 V','Ø1.6 · 240–280 A · 26–30 V','Ø1.2 · 280–320 A · 30–34 V'],
     pop:{ title:'로트에 있는 와이어와 수직 자세', ref:'D1.1 Table 5.1 (확인 필요)',
       body:'수직 자세 Prequalified FCAW의 최대 와이어 지름은 5/64 in(2.0 mm)입니다. 재고에는 Ø1.2와 Ø1.6이 있고, 수직에서는 가는 와이어가 용융지 제어에 유리합니다.',
-      quote:'수직·위보기 자세 최대 와이어 지름 5/64 in(2.0 mm). 전류는 필러 제조사 권장 범위 이내.' },
-    answer:'Ø1.2 mm · 200 A · 25 V', weight:6,
-    fb:'Ø1.6은 수직에서 용융지가 무너지기 쉽고, 300 A는 Ø1.2의 권장 범위를 넘습니다. PQR 전류·전압 범위 안에서 고르세요.' },
+      quote:'수직·위보기 자세 최대 와이어 지름 5/64 in(2.0 mm). 전류·전압·속도는 PQR 기록값의 허용 변동폭 안에서 적는다.' },
+    answer:'Ø1.2 · 180–220 A · 23–27 V', weight:6,
+    fb:'PQR-ST-012 기록은 Ø1.2 · 210 A · 26 V입니다. 허용 변동폭(전류 ±10 %, 전압 ±7 %) 안에서 범위로 적습니다. Ø1.6은 수직에서 용융지가 무너지기 쉽고, 300 A는 Ø1.2 권장 범위를 넘습니다.' },
 
   { id:'filler', sec:3, label:'필러 분류', en:'Filler Classification', kind:'ask', ui:'chips', key:true,
     options:['E71T-1C (A5.20)','E70T-1C (A5.20)','E71T-1M (A5.20)','ER70S-6 (A5.18)'],
@@ -166,12 +166,12 @@ const FIELDS = [
     fb:'E70T-1C는 아래보기·수평 전용이라 수직 3F에서 비드가 흘러내립니다. 재고에 있다고 맞는 와이어는 아닙니다.' },
 
   { id:'fano', sec:3, label:'F-No. / A-No.', en:'Referenced ASME No.', kind:'ask', ui:'chips',
-    options:['참고 F-6 / A-1','참고 F-4 / A-1','참고 F-6 / A-2','N/A (기재 안 함)'],
+    options:['참고 F-6 / A-1','N/A (D1.1 비적용)','참고 F-6 / A-2','참고 F-4 / A-1'],
     pop:{ title:'이 양식의 칸이 ASME에서 온 것입니다', ref:'ASME Sec. IX QW-432·442 / D1.1 Table 5.4',
       body:'F-No./A-No.는 ASME Sec. IX의 분류입니다. 근거 규격이 D1.1이면 필러는 AWS 분류(Table 5.4)로 관리되므로, 이 칸은 참고 기재로 채웁니다.',
       quote:'D1.1은 F-No./A-No.를 쓰지 않고 AWS 분류로 필러를 관리한다. ASME 기준 F-6(플럭스 코어드)·A-1(탄소강)은 참고값.' },
-    answer:'참고 F-6 / A-1', weight:3,
-    fb:'E71T-1C는 ASME 기준 F-6, 탄소강 용착금속은 A-1입니다. 근거는 AWS 분류(Table 5.4)이고 이 칸은 참고값입니다.' },
+    answer:['참고 F-6 / A-1','N/A (D1.1 비적용)'], weight:3,
+    fb:'E71T-1C는 ASME 기준 F-6, 탄소강은 A-1입니다. D1.1 근거는 AWS 분류(Table 5.4)이므로 “N/A”로 두어도 맞습니다. 둘 다 인정합니다.' },
 
   { id:'gas', sec:3, label:'차폐가스 · 유량', en:'Shielding Gas', kind:'ask', ui:'chips',
     options:['100% CO₂ · 15–25 L/min + 방풍','Ar 75~80% + CO₂ · 15–25 L/min','100% Ar · 15–25 L/min'],
@@ -179,7 +179,7 @@ const FIELDS = [
       body:'차폐가스는 필러 분류의 가스 문자와 같아야 합니다. 끝이 C면 100% CO₂, M이면 Ar 혼합입니다. 내일 서풍 3~4 m/s 예보도 확인하세요.',
       quote:'FCAW-G 차폐가스는 필러 분류와 일치해야 한다. 풍속 약 8 km/h(2.2 m/s) 초과 시 방풍 조치가 필요하다.' },
     answer:'100% CO₂ · 15–25 L/min + 방풍', weight:7, crit:true,
-    fb:'분류가 E71T-1<b>C</b>이므로 100% CO₂입니다. 바람 3~4 m/s에서는 방풍막 없이 가스 차폐가 깨집니다.' },
+    fb:'분류가 E71T-1<b>C</b>이므로 100% CO₂입니다. Ar 혼합은 성분(Mn·Si)과 필수변수가 달라져 PQR 재인정 대상이고, 바람 3~4 m/s에서 방풍이 없으면 차폐가 깨져 기공이 생깁니다.' },
 
   /* 04 자세·열 */
   { id:'position', sec:4, label:'자세 · 진행 방향', en:'Position / Progression', kind:'ask', ui:'chips', key:true,
@@ -203,9 +203,9 @@ const FIELDS = [
     pop:{ title:'전압·전류·속도로 계산', ref:'D1.1 입열량',
       body:'H = (전압 × 전류 × 60) ÷ 이동속도. 단위를 mm·kJ로 맞춥니다. 충격시험이 요구되지 않는 이 작업에서는 기록·관리 항목입니다.',
       quote:'H(kJ/mm) = 60 × E(V) × I(A) ÷ 1000 ÷ v(mm/min).',
-      detail:'조건: 25 V · 200 A · 250 mm/min → 계산해 보세요. (허용 1.00–1.40)' },
-    answer:{ min:1.00, max:1.40 }, weight:3,
-    fb:'25 V × 200 A × 60 ÷ 250 mm/min ≈ 1.20 kJ/mm 입니다. 공란으로 두지 말고 계산해 기재합니다.' },
+      detail:'조건: 26 V · 210 A · 250 mm/min → 계산해 보세요. (허용 1.00–1.50)' },
+    answer:{ min:1.00, max:1.50 }, weight:3,
+    fb:'26 V × 210 A × 60 ÷ 250 mm/min ≈ 1.31 kJ/mm 입니다. 공란으로 두지 말고 계산해 기재합니다.' },
 
   { id:'pwht', sec:4, label:'용접후열처리', en:'PWHT', kind:'ask', ui:'chips',
     options:['없음 (None)','620 °C · 1 h','565 °C · 2 h'],
@@ -241,8 +241,8 @@ const FRACTURE_TYPES = {
   preheat:   { id:'hydrogen', label:'수소 지연 균열', where:'토우부', desc:'예열 없이 영하 모재에 용접 → 수소가 비드 아래에 머물다 하중이 걸린 뒤 토우에서 균열이 시작됐습니다.' },
   filler:    { id:'throat',   label:'비드 처짐 · 목두께 부족', where:'목두께', desc:'E70T-1C(아래보기·수평 전용)를 수직에 써서 비드가 흘러내렸습니다. 유효 목두께가 모자라 전단 파단됐습니다.' },
   position:  { id:'fusion',   label:'융합 불량', where:'루트부', desc:'하진 조건으로 12 mm 판에 용입이 들어가지 않았습니다. 루트 경계에서 비드가 껍질처럼 박리됐습니다.' },
-  polarity:  { id:'porosity', label:'기공 다발', where:'비드 내부', desc:'DCEN으로 아크가 불안정해져 가스가 빠져나가지 못했습니다. 비드 단면에 기공이 이어지며 파단됐습니다.' },
-  gas:       { id:'porosity', label:'기공 · 가스 차폐 불량', where:'비드 내부', desc:'바람 3~4 m/s에서 방풍 조치 없이 용접해 차폐가 깨졌습니다. 비드에 기공이 벌집처럼 생겼습니다.' },
+  polarity:  { id:'fusion', label:'융합 불량 · 스패터', where:'루트부', desc:'DCEN으로 아크가 불안정해 스패터가 늘고 용입이 들어가지 않았습니다. 루트 경계에서 비드가 박리되며 파단됐습니다.' },
+  gas:       { id:'porosity', label:'기공 · 가스 차폐 불량', where:'비드 내부', desc:'분류(C)와 다른 가스이거나 바람 3~4 m/s에서 방풍 없이 용접해 차폐가 깨졌습니다. 비드에 기공이 벌집처럼 생기고 성분도 달라졌습니다.' },
   group:     { id:'reject',   label:'근거 없는 절차서', where:'—', desc:'SM275를 등재 강재처럼 Group에 넣었습니다. 감리가 근거 문서를 요구하며 절차를 반려했습니다.' },
   prequal:   { id:'reject',   label:'근거 없는 절차서', where:'—', desc:'Table 5.3 미등재 강재를 사전인정으로 처리했습니다. 감리 반려 후 용접이 중지됐습니다.' },
   default:   { id:'hydrogen', label:'균열', where:'토우부', desc:'절차서의 필수변수가 현장 조건과 맞지 않아 용접부가 하중을 견디지 못했습니다.' }

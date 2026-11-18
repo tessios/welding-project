@@ -454,7 +454,7 @@
 
   function checkField(f, val){
     if(val === undefined || String(val).trim() === '') return false;
-    if(f.ui === 'chips') return val === f.answer;
+    if(f.ui === 'chips') return Array.isArray(f.answer) ? f.answer.includes(val) : val === f.answer;
     if(f.ui === 'number'){
       const n = parseFloat(String(val).replace(',', '.'));
       if(isNaN(n)) return false;
@@ -533,7 +533,7 @@
 
     if(pass){
       root.innerHTML = `<div class="res-wrap"><div class="res-grid">
-        <div class="res-visual" id="resVisual">${beamSVG('pass', null, '228 78 336 268')}</div>
+        <div class="res-visual" id="resVisual">${beamSVG('pass', null, '232 74 340 274')}</div>
         <div class="res-copy">
           <div class="res-badge ok">● 검사 통과</div>
           <div class="res-score"><span class="n">${score}</span><span class="d">/ 100</span></div>
@@ -562,7 +562,7 @@
       }, 1100 + i * 1700));
     } else {
       root.innerHTML = `<div class="res-wrap"><div class="res-grid">
-        <div class="res-visual" id="resVisual">${beamSVG('fail', ft.id, '228 78 336 268')}</div>
+        <div class="res-visual" id="resVisual">${beamSVG('fail', ft.id, '232 74 340 274')}</div>
         <div class="res-copy">
           <div class="res-badge bad">● 부적합 — ${ft.label}</div>
           <div class="res-score"><span class="n">${score}</span><span class="d">/ 100</span></div>
@@ -716,12 +716,12 @@
       <text x="250" y="392" fill="#6f7a87" font-size="9.5" font-family="monospace">SM275 · 12t</text>
 
       ${mode === 'pass' ? `
-        <g opacity=".95"><rect x="470" y="44" width="152" height="36" rx="4" fill="none" stroke="#4bd29a" stroke-width="1.4" transform="rotate(-6 546 62)"/>
-        <text x="494" y="69" fill="#8ff0c4" font-size="16" font-family="monospace" font-weight="700" transform="rotate(-6 546 62)">PASS</text></g>` : ''}
+        <g opacity=".95"><rect x="382" y="104" width="150" height="34" rx="4" fill="none" stroke="#4bd29a" stroke-width="1.4" transform="rotate(-6 457 121)"/>
+        <text x="408" y="128" fill="#8ff0c4" font-size="15" font-family="monospace" font-weight="700" transform="rotate(-6 457 121)">PASS</text></g>` : ''}
 
       ${isFail && fracId === 'reject' ? `
-        <g opacity=".95" class="stamp-reject"><rect x="420" y="40" width="190" height="44" rx="4" fill="none" stroke="#ff5d4d" stroke-width="2" transform="rotate(-7 515 62)"/>
-        <text x="436" y="70" fill="#ff7b6b" font-size="17" font-family="monospace" font-weight="700" transform="rotate(-7 515 62)">REJECTED</text></g>` : ''}
+        <g opacity=".95" class="stamp-reject"><rect x="330" y="96" width="196" height="42" rx="4" fill="none" stroke="#ff5d4d" stroke-width="2" transform="rotate(-7 428 117)"/>
+        <text x="348" y="125" fill="#ff7b6b" font-size="16" font-family="monospace" font-weight="700" transform="rotate(-7 428 117)">REJECTED</text></g>` : ''}
     </svg>`;
   }
 
