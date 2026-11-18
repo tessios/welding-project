@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>WPS 실습실 · AWS D1.1 · Carbon Steel</title>
+<meta name="description" content="AWS D1.1 탄소강 구조물 WPS 독도·변수 시뮬레이션·작성·채점 실습 (교육용)" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">W</span>
+      <div class="brandtxt">
+        <b>WPS 실습실</b>
+        <em>AWS D1.1 · Carbon Steel</em>
+      </div>
+    </div>
+    <nav class="stepper" id="stepper" aria-label="단계"></nav>
+    <div class="topright">
+      <span class="timer" id="timer" title="경과 시간">00:00</span>
+      <button class="ghost" id="btnGlossary" type="button">사전</button>
+      <button class="ghost" id="btnHome" type="button">홈</button>
+    </div>
+  </header>
+
+  <div class="watermark" aria-hidden="true">교육용 — 실제 제작에 사용 금지</div>
+
+  <main id="app">
+    <section id="s0" class="screen"></section>
+    <section id="s1" class="screen"></section>
+    <section id="s2" class="screen"></section>
+    <section id="s3" class="screen"></section>
+    <section id="s4" class="screen"></section>
+    <section id="s5" class="screen"></section>
+    <section id="s6" class="screen"></section>
+  </main>
+
+  <footer class="pagefoot">
+    <span>교육용 실습 자료 · WPS·PQR·과제서는 모두 가상 문서입니다.</span>
+    <span class="footlinks">
+      <button type="button" class="linkish" id="btnInstructor">강사 모드</button>
+    </span>
+  </footer>
+
+  <div class="overlay" id="overlay" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="조항·용어 사전">
+      <div class="sheet-head">
+        <b>조항 · 용어 사전</b>
+        <input id="glossSearch" type="search" placeholder="조항 번호나 용어로 찾기 (예: 5.8, F-No., 백킹)" />
+        <button type="button" class="ghost" id="glossClose">닫기</button>
+      </div>
+      <div class="sheet-body" id="glossBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
