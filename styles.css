@@ -492,7 +492,7 @@ input,select,textarea{font:inherit}
 }
 .pop .fill-btn:hover{background:rgba(255,255,255,.14)}
 .pop .arrow-line{position:absolute;width:10px;height:10px;background:inherit;transform:rotate(45deg);border-left:1px solid rgba(255,255,255,.16);border-top:1px solid rgba(255,255,255,.16)}
-.pop.bottom-sheet{left:14px !important;right:14px;bottom:14px;top:auto !important;width:auto;transform:translateY(14px)}
+.pop.bottom-sheet{left:14px !important;right:14px;bottom:calc(88px + env(safe-area-inset-bottom));top:auto !important;width:auto;transform:translateY(14px)}
 .pop.bottom-sheet.on{transform:none}
 
 /* 제출 바 */

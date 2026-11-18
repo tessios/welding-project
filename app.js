@@ -12,6 +12,7 @@
   const state = { scene:'landing', answers:{}, timers:[] };
   const SCENES = ['landing','call','brief','wps','result'];
   const sceneEl = id => document.getElementById('scene-' + id);
+  const CAN_HOVER = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
   const TRAY = [
     { fid:'filler',   label:'필러' },
     { fid:'preheat',  label:'예열' },
@@ -340,7 +341,7 @@
       const f = FIELDS.find(x => x.id === el.dataset.fid);
       if(!f) return;
       el.addEventListener('mouseenter', () => openPop(el, f));
-      el.addEventListener('mouseleave', scheduleClose);
+      el.addEventListener('mouseleave', () => { if(CAN_HOVER) scheduleClose(); });
       el.addEventListener('focusin',  () => openPop(el, f));
       el.addEventListener('click', e => {
         if(e.target.closest('input, .chip, .qm')) return;
