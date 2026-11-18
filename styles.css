@@ -570,7 +570,7 @@ input,select,textarea{font:inherit}
 .crack-line{stroke-dasharray:400;stroke-dashoffset:400;transition:stroke-dashoffset 1.1s cubic-bezier(.5,0,.2,1)}
 .broken .crack-line{stroke-dashoffset:0}
 .bracket-part{transition:transform 1.35s cubic-bezier(.35,0,.6,1),opacity 1.6s ease-in}
-.broken .bracket-part{transform:translate(-46px,120px) rotate(9deg);opacity:.85}
+.broken .bracket-part{transform:translate(-40px,96px) rotate(7deg);opacity:.9}
 .broken .load-arrow{opacity:0}
 .load-arrow{transition:opacity .4s}
 .spark{opacity:0}

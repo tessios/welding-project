@@ -533,7 +533,7 @@
 
     if(pass){
       root.innerHTML = `<div class="res-wrap"><div class="res-grid">
-        <div class="res-visual" id="resVisual">${beamSVG('pass')}</div>
+        <div class="res-visual" id="resVisual">${beamSVG('pass', null, '228 78 336 268')}</div>
         <div class="res-copy">
           <div class="res-badge ok">● 검사 통과</div>
           <div class="res-score"><span class="n">${score}</span><span class="d">/ 100</span></div>
@@ -562,7 +562,7 @@
       }, 1100 + i * 1700));
     } else {
       root.innerHTML = `<div class="res-wrap"><div class="res-grid">
-        <div class="res-visual" id="resVisual">${beamSVG('fail', ft.id)}</div>
+        <div class="res-visual" id="resVisual">${beamSVG('fail', ft.id, '228 78 336 268')}</div>
         <div class="res-copy">
           <div class="res-badge bad">● 부적합 — ${ft.label}</div>
           <div class="res-score"><span class="n">${score}</span><span class="d">/ 100</span></div>
@@ -623,7 +623,8 @@
   /* ======================================================================
      철골 단면 SVG — intact / pass / fail(파단 유형별)
      ====================================================================== */
-  function beamSVG(mode, fracId){
+  function beamSVG(mode, fracId, view){
+    const vb = view || '152 18 418 356';
     const isFail = mode === 'fail';
     const crack = {
       hydrogen:'M282 156 L272 144 L264 132 L254 120',
@@ -640,7 +641,7 @@
         }).join('')
       : '';
 
-    return `<svg viewBox="186 12 434 372" width="100%" role="img"
+    return `<svg viewBox="${vb}" width="100%" role="img"
       aria-label="보 웨브와 브래킷 필렛 접합 단면" class="beam-svg ${isFail ? 'fail' : 'ok'}">
       <defs>
         <pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
@@ -681,14 +682,14 @@
         <rect x="250" y="45" width="30" height="310" fill="url(#hatch)" opacity=".55"/>
         <rect x="250" y="45" width="30" height="310" fill="none" stroke="#4d5763" stroke-width="1.2"/>
         <text x="232" y="212" fill="#6f7a87" font-size="9.5" font-family="monospace" transform="rotate(-90 232 212)">WEB 12t</text>
-        <text x="196" y="26" fill="#59636f" font-size="9" font-family="monospace">H-300×300</text>
+        <text x="330" y="30" fill="#59636f" font-size="9" font-family="monospace">H-300×300</text>
       </g>
 
       <g class="bracket-part">
         <rect x="280" y="178" width="230" height="22" fill="url(#steelG)"/>
         <rect x="280" y="178" width="230" height="22" fill="url(#hatch)" opacity=".5"/>
         <rect x="280" y="178" width="230" height="22" fill="none" stroke="#4d5763" stroke-width="1.2"/>
-        <text x="512" y="172" fill="#6f7a87" font-size="10" font-family="monospace">BRACKET 12t</text>
+        <text x="330" y="172" fill="#6f7a87" font-size="9.5" font-family="monospace">BRACKET 12t</text>
         <circle cx="470" cy="189" r="4.5" fill="#0b0f13" stroke="#4d5763"/>
       </g>
 
@@ -712,7 +713,7 @@
         <line x1="306" y1="150" x2="306" y2="228" stroke="#ff9a3c" stroke-width="1" opacity=".5"/>
       </g>
       <text x="312" y="246" fill="#ff9a3c" font-size="10" font-family="monospace">3F · FILLET 6</text>
-      <text x="238" y="392" fill="#6f7a87" font-size="10" font-family="monospace">SM275 · 12t</text>
+      <text x="250" y="392" fill="#6f7a87" font-size="9.5" font-family="monospace">SM275 · 12t</text>
 
       ${mode === 'pass' ? `
         <g opacity=".95"><rect x="470" y="44" width="152" height="36" rx="4" fill="none" stroke="#4bd29a" stroke-width="1.4" transform="rotate(-6 546 62)"/>
