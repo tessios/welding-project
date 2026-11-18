@@ -848,7 +848,7 @@
 
     if(pass){
       root.innerHTML = `<div class="res-wrap"><div class="res-grid">
-        <div class="res-visual" id="resVisual">${beamSVG('pass', null, '204 12 392 384')}</div>
+        <div class="res-visual" id="resVisual">${beamSVG('pass', null, '232 104 330 180')}</div>
         <div class="res-copy">
           <div class="res-badge ok">● 검사 통과</div>
           <div class="res-score"><span class="n">${score}</span><span class="d">/ 100</span></div>

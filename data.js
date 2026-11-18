@@ -103,7 +103,7 @@ const CAT = {
 const FIELDS = [
 
   /* 01 이음 */
-  { id:'joint', sec:1, label:'이음 형식', en:'Joint Type', kind:'given', cat:'n', ui:'chips',
+  { id:'joint', sec:1, label:'이음 형식', en:'Joint Type', kind:'given', cat:'e', ui:'chips',
     options:['T-joint · 양면 필렛','Butt · V-groove (CJP)','Corner · 편면 필렛'],
     pop:{ kind:'field', title:'도면 ST-401 / B-12', ref:'도면 지시',
       body:'보 웨브에 브래킷을 직각으로 세워 붙입니다. 개선 없이 양면 필렛 6 mm 연속입니다.',

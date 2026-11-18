@@ -1044,3 +1044,8 @@ body.shake{animation:shakeIt .42s cubic-bezier(.36,.07,.19,.97)}
   .progress-dots{display:none}
   .res-visual{position:static}
 }
+
+@media (max-width:760px){
+  .landing-foot{display:none}
+  #scene-landing{padding-bottom:118px}
+}

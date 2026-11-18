@@ -68,7 +68,7 @@ size of fillet by the amount of separation.”
 
 | 칸 | 원문 근거 | 분류 | 핵심 문구 |
 |---|---|---|---|
-| 이음 형식 | 5.4.3 · Figure 5.3 | 비필수(현장 정보) | “See Table 7.7 for minimum fillet weld sizes and Figure 5.3 for prequalified fillet weld joint details.” |
+| 이음 형식 | 5.4.3 · Figure 5.3 · Table 5.5 (19) | 필수 | “See Table 7.7 for minimum fillet weld sizes and Figure 5.3 for prequalified fillet weld joint details.” |
 | 받침판·백가우징 | 5.4.1.2 · 5.4.3 | 필수 | CJP만 steel backing 요구 — 필렛은 대상 아님 |
 | 루트 간격 | 7.21.1 | 비필수(제작 치수) | 위 2절 |
 | 필렛 각장 | 7.13 · Table 7.7 | 필수 | “minimum … as shown in Table 7.7 … unless the design drawings specify welds of a larger size.” |
