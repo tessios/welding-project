@@ -1,4 +1,4 @@
-"""WPS작성 실습 4차 고도화 — 전 구간 Playwright 검증
+"""WPS작성 실습 5차 마무리 — 전 구간 Playwright 검증 (4차 항목 유지 + 5차 항목 추가)
 
 반영 확인
 1) 「이 값 넣기」 버튼 0건 — 선택형(chips/select)과 직접 입력형(input)만 존재
@@ -7,6 +7,12 @@
 4) 화면·팝오버·해설 어디에도 참조 양식 명칭/‘양식’ 문구 0건
 5) 인물 통화 음성 제거 — 아나운서 내레이션 + 효과음(전화벨/성공/파단/붕괴)
 6) 모바일(390×844) 근거 팝오버 컴팩트 + 문항 클릭 열림 + 더블탭 닫힘
+5차 추가
+7) 전류·전압 = 최소~최대 두 칸(range) · 한 칸만 적어도 합격 · 최대<최소만 오류
+8) 와이어 지름 복수 입력(콤마·슬래시) — 1개/2~3개 모두 합격
+9) 합격 화면에 와이어 지름별 적정 조건·경제성 카드(교재 p.100·p.425), 내 지름 행 하이라이트
+10) 내레이션 자막은 화면 표기(ASTM A36 · 12 mm · AWS D1.1) / 음성은 발음용 문장 그대로
+11) 배경음악 = 저작권 안전 오리지널 트랙(audio/bgm_terran.mp3) 로드 확인
 """
 import asyncio, os, threading, functools, http.server, socketserver, json, sys
 from playwright.async_api import async_playwright
@@ -27,9 +33,9 @@ ANSWERS = {
     "process": "FCAW (Semi-auto)",
     "polarity": "DC · DCEP (역극성)",
     # 비필수·자유 입력 — 일부러 다른 유효값을 넣어 감점이 없는지 확인
-    "wireDia": "1.6",
-    "current": "400",
-    "voltage": "31",
+    "wireDia": "1.2, 1.4, 1.6",
+    "current": ("260", "300"),
+    "voltage": ("28", "30"),
     "filler": "E71T-1C (A5.20)",
     "fano": "참고 F-6 / A-1",
     "gas": "100% CO₂ · 15–30 L/min · Nozzle #4",
@@ -63,6 +69,9 @@ async def set_field(pg, fid, val):
     el = pg.locator(sel)
     if await el.locator("select").count():
         await el.locator("select").select_option(value=val)
+    elif await el.locator(".range-input").count():
+        await el.locator('input[data-range="min"]').fill(val[0])
+        await el.locator('input[data-range="max"]').fill(val[1])
     elif await el.locator("input").count():
         await el.locator("input").fill(val)
     else:
@@ -153,8 +162,30 @@ async def main():
         ok("드롭다운 3개(모재 규격·두께 범위·공정)",
            [r["id"] for r in ui if r["select"]] == ["baseMetal", "thickRange", "process"],
            [r["id"] for r in ui if r["select"]])
-        ok("와이어 지름·전류·전압 = 직접 입력",
-           all(next(r for r in ui if r["id"] == f)["input"] == 1 for f in ["wireDia", "current", "voltage"]))
+        ranges = await pg.eval_on_selector_all(".range-input", """els => els.map(e => ({
+            fid: e.dataset.rangeField,
+            n: e.querySelectorAll('input').length,
+            min: e.querySelector('input[data-range="min"]').placeholder,
+            max: e.querySelector('input[data-range="max"]').placeholder }))""")
+        ok("5차 — 전류·전압 = 최소~최대 두 칸",
+           [r["fid"] for r in ranges] == ["current", "voltage"] and all(r["n"] == 2 for r in ranges), ranges)
+        ok("5차 — 범위 칸 안내문 = 최소/최대",
+           all(r["min"] == "최소" and r["max"] == "최대" for r in ranges), ranges)
+        ok("5차 — 와이어 지름 = 입력 1칸 + 복수 안내",
+           next(r for r in ui if r["id"] == "wireDia")["input"] == 1
+           and await pg.locator('[data-dia-hint="wireDia"]').count() == 1)
+
+        # 5차 — 내레이션 자막은 화면 표기, 음성 문장은 발음용으로 분리
+        narr = await pg.inner_text("#narrBar")
+        ok("5차 — 자막 표기(AWS D1.1/D1.1M:2025)", "AWS D1.1/D1.1M:2025" in narr, narr[:70])
+        ok("5차 — 자막에 발음용 표기 0건",
+           not any(x in narr for x in ["에이에스티엠", "삼십육", "밀리미터", "에이더블유에스", "이천이십오년판"]), narr[:70])
+        caps = await pg.evaluate("() => Object.entries(SCENARIO.narr).map(([k,v]) => [k, v.cap || '', v.text || ''])")
+        ok("5차 — 자막(cap) 12종 모두 존재", all(c[1] for c in caps), [c[0] for c in caps if not c[1]])
+        ok("5차 — 자막에 ASTM A36 · 12 mm · Table 표기",
+           sum(("ASTM A36" in c[1]) or ("12 mm" in c[1]) or ("Table 5." in c[1]) for c in caps) >= 3)
+        ok("5차 — 음성용 문장은 그대로(발음 표기 유지)",
+           any("에이에스티엠" in c[2] for c in caps))
 
         # 모든 근거 팝오버 — 값 넣기 버튼/참조 양식/‘양식’ 문구 0건, 입열량은 공식·조건만
         pop_texts, fillbtns = {}, 0
@@ -218,6 +249,27 @@ async def main():
         await pg.wait_for_timeout(1200)
         ok("성공 효과음 재생", any("sfx_success" in u for u in audio), audio[-3:])
         await pg.screenshot(path=os.path.join(OUT, "07-pass.png"))
+
+        # 5차 — 합격 후 와이어(용접봉) 지름별 적정 조건·경제성 카드
+        ok("5차 — 합격 화면에 와이어 가이드", await pg.locator("#wireEcon").count() == 1)
+        we = await pg.inner_text("#wireEcon")
+        ok("5차 — 교재 p.100 표 수치", all(s in we for s in ["10~15", "15~20", "20~25", "350", "400"]), we[:80])
+        ok("5차 — 내가 적은 지름 표시", "Ø1.2 · Ø1.4 · Ø1.6" in we)
+        ok("5차 — 내 지름 행 하이라이트(6행)", await pg.locator("#wireEcon .we-table tr.on").count() == 6,
+           await pg.locator("#wireEcon .we-table tr.on").count())
+        ok("5차 — 경제성 4단면(100·50·50·57.8)",
+           all(s in we for s in ["A = 100 mm²", "A = 50 mm²", "A = 57.8 mm²", "60°", "45°"]))
+        ok("5차 — Stick-out 해설", "Stick-out" in we and "노즐" in we)
+        ok("5차 — 도식 SVG", await pg.locator("#wireEcon svg").count() >= 2,
+           await pg.locator("#wireEcon svg").count())
+        ok("5차 — 가장 경제적 (d) 표시", "(d) 한 면 60° 베벨" in we)
+        ok("5차 — 배경음악 오리지널 트랙", any("bgm_terran" in u for u in audio))
+        await pg.eval_on_selector("#wireEcon", "e => e.scrollIntoView({block:'start'})")
+        await pg.wait_for_timeout(400)
+        await pg.screenshot(path=os.path.join(OUT, "07b-pass-guide.png"))
+        await pg.evaluate("window.scrollBy(0,700)")
+        await pg.wait_for_timeout(300)
+        await pg.screenshot(path=os.path.join(OUT, "07c-pass-guide-econ.png"))
         end_ok = False
         for _ in range(60):
             await pg.wait_for_timeout(700)
@@ -227,6 +279,19 @@ async def main():
         ok("성공 엔딩 아나운서 내레이션(n_end_pass)", end_ok)
         ok("합격 엔딩 — 인물 통화 음성 0건",
            not any("/audio/s0" in u or "/audio/f0" in u for u in audio))
+
+        # 5차 — 지름 1개 + 전류 한 칸만 적어도 합격(감점 없음)
+        await pg.click("#btnAgain")
+        await pg.wait_for_timeout(600)
+        await set_field(pg, "wireDia", "1.2")
+        await pg.locator('.field[data-fid="current"] input[data-range="max"]').fill("")
+        await pg.click("#btnSubmit")
+        await pg.wait_for_timeout(1500)
+        ok("5차 — 지름 1개·전류 최소만 → 합격 100점", (await pg.inner_text(".res-score .n")) == "100",
+           await pg.inner_text(".res-score .n"))
+        ok("5차 — 지름 1개면 3행만 하이라이트", await pg.locator("#wireEcon .we-table tr.on").count() == 3,
+           await pg.locator("#wireEcon .we-table tr.on").count())
+        ok("5차 — 내 지름 표시(1개)", "Ø1.2" in await pg.inner_text("#wireEcon .we-mine"))
 
         # 불합격 시나리오
         await pg.click("#btnAgain")
@@ -241,6 +306,7 @@ async def main():
         await pg.screenshot(path=os.path.join(OUT, "08-collapse.png"))
         await pg.wait_for_timeout(2800)
         ok("불합격 배지", "부적합" in await pg.inner_text(".res-badge"))
+        ok("5차 — 불합격 화면에는 와이어 가이드 없음", await pg.locator("#wireEcon").count() == 0)
         ok("오류 근거 표시", await pg.locator("#errZone .err").count() >= 1)
         await pg.screenshot(path=os.path.join(OUT, "09-fail.png"))
         end_fail = False

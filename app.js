@@ -204,7 +204,8 @@
   async function narrate(key, seq){
     const n = SCENARIO.narr[key];
     if(!n) return;
-    showNarr(n.label, n.text);
+    /* 자막은 화면 표기(cap), 음성은 발음용 문장(text)을 그대로 쓴다 */
+    showNarr(n.label, n.cap || n.text);
     await AU.clip(key);
     if(alive(seq)) hideNarr();
   }
@@ -310,7 +311,7 @@
       await wait(350);
       if(!alive(seq)) return;
       showMonologue();
-      showNarr('핵심 정리', SCENARIO.narr.n_summary.text);
+      showNarr('핵심 정리', (SCENARIO.narr.n_summary.cap || SCENARIO.narr.n_summary.text));
       await AU.clip('n_summary');
       if(alive(seq)) hideNarr();
     }
@@ -500,13 +501,25 @@
         <option value="">— 보기에서 선택 —</option>` +
         f.options.map(o => `<option value="${esc(o)}"${filled === o ? ' selected' : ''}>${esc(o)}</option>`).join('') +
         `</select>`;
+    } else if(f.ui === 'range'){
+      /* 최소~최대 두 칸 — 한 칸만 적어도 된다 */
+      const v = (filled && typeof filled === 'object') ? filled : {min:'', max:''};
+      ctl = `<div class="range-input${f.unit ? ' has-unit' : ''}" data-range-field="${f.id}">
+        <input type="text" inputmode="decimal" data-range="min" aria-label="${esc(f.label)} 최소"
+          placeholder="${esc(f.phMin || '최소')}" value="${esc(v.min || '')}" autocomplete="off" spellcheck="false">
+        <span class="tilde" aria-hidden="true">~</span>
+        <input type="text" inputmode="decimal" data-range="max" aria-label="${esc(f.label)} 최대"
+          placeholder="${esc(f.phMax || '최대')}" value="${esc(v.max || '')}" autocomplete="off" spellcheck="false">
+        ${f.unit ? `<span class="unit">${f.unit}</span>` : ''}
+      </div>
+      <div class="range-hint" data-range-hint="${f.id}">최소~최대 두 칸 — 한 칸만 적어도 합격합니다.</div>`;
     } else {
       ctl = `<div class="${f.unit ? 'has-unit' : ''}">
         <input type="${f.ui === 'number' ? 'number' : 'text'}" ${f.ui === 'number' ? 'step="0.01"' : ''} ${f.decimal || f.ui === 'number' ? 'inputmode="decimal"' : ''}
           data-field="${f.id}" placeholder="${esc(f.ph || '')}"${filled ? ` value="${esc(filled)}"` : ''}
           autocomplete="off" spellcheck="false">
         ${f.unit ? `<span class="unit">${f.unit}</span>` : ''}
-      </div>`;
+      </div>` + (f.multi ? `<div class="dia-hint" data-dia-hint="${f.id}">한 개 또는 2~3개 — 콤마( , ) · 슬래시( / ) · 띄어쓰기로 구분</div>` : '');
     }
     const c = CAT[f.cat] || CAT.e;
 
@@ -528,9 +541,44 @@
       closePop();
       updateFillCount();
     };
+    /* 범위 입력(최소~최대) — 두 칸을 한 객체로 모은다 */
+    const acceptRange = box => {
+      const fid = box.dataset.rangeField;
+      const min = $('input[data-range="min"]', box).value.trim();
+      const max = $('input[data-range="max"]', box).value.trim();
+      state.answers[fid] = { min, max };
+      box.closest('.field').classList.remove('missing','bad');
+      const hint = $(`[data-range-hint="${fid}"]`);
+      if(hint){
+        const both = min && max;
+        hint.classList.toggle('warn', !both);
+        hint.textContent = both
+          ? '범위로 적었습니다 — 현장 실측이 흔들려도 이 안이면 적합입니다.'
+          : (min || max ? '한 칸만 적었습니다. 실무 WPS는 범위로 적는 것이 원칙입니다(감점 없음).'
+                        : '최소~최대 두 칸 — 한 칸만 적어도 합격합니다.');
+      }
+      closePop();
+      updateFillCount();
+    };
+    /* 와이어 지름 복수 입력 — 인식된 지름을 바로 보여준다 */
+    const showDia = el => {
+      const fid = el.dataset.field;
+      const hint = $(`[data-dia-hint="${fid}"]`);
+      if(!hint) return;
+      const dias = parseDias(el.value);
+      hint.classList.toggle('ok', dias.length > 0);
+      hint.textContent = dias.length
+        ? `인식: ${dias.map(d => 'Ø' + d).join(' · ')} — ${dias.length}개, 모두 합격 범위`
+        : '한 개 또는 2~3개 — 콤마( , ) · 슬래시( / ) · 띄어쓰기로 구분';
+    };
     root.addEventListener('input', e => {
       const t = e.target;
-      if(t.matches('input[data-field], select[data-field]')) acceptValue(t);
+      if(t.matches('.range-input input')){ acceptRange(t.closest('.range-input')); return; }
+      if(t.matches('input[data-field], select[data-field]')){
+        acceptValue(t);
+        const f = FIELDS.find(x => x.id === t.dataset.field);
+        if(f && f.multi) showDia(t);
+      }
     });
     root.addEventListener('change', e => {
       const t = e.target;
@@ -559,7 +607,7 @@
       /* 근거는 호버가 아니라 문항을 눌렀을 때 열린다(입력·선택 조작 방해 금지) */
       /* 문항 카드·라벨을 누르면 근거가 열린다. input·select·칩 조작은 방해하지 않는다. */
       el.addEventListener('click', e => {
-        if(e.target.closest('input, select, option, .chip, .qm')) return;
+        if(e.target.closest('input, select, option, .chip, .qm, .range-input')) return;
         openPop(el, f, true);
       });
       const qm = $('.qm', el);
@@ -749,6 +797,7 @@
   /* ── 작성 카운트 · 트레이 ──────────────────────────────── */
   function isFilled(f){
     const v = state.answers[f.id];
+    if(v && typeof v === 'object') return String(v.min || '').trim() !== '' || String(v.max || '').trim() !== '';
     return v !== undefined && String(v).trim() !== '';
   }
   function updateFillCount(){
@@ -774,8 +823,43 @@
   const norm = v => String(v == null ? '' : v).toLowerCase()
     .replace(/\s+/g, '').replace(/[()]/g, '').replace(/[·,.]/g, '').replace(/-/g, '');
 
+  /* 와이어 지름 복수 입력 — “1.2, 1.4”, “1.2/1.4”, “1.2 1.4” 모두 인식 */
+  function parseDias(v){
+    const out = [];
+    let raw = String(v == null ? '' : v).trim();
+    /* 「1,2」처럼 콤마를 소수점으로 쓴 한 개짜리 지름 처리 */
+    if(/^Ø?\s*\d,\d(\s*mm)?$/i.test(raw)) raw = raw.replace(',', '.');
+    raw.split(/[\/,;·\s]+/).forEach(tok => {
+      const m = tok.match(/\d+(?:[.,]\d+)?/);
+      if(!m) return;
+      const n = parseFloat(m[0].replace(',', '.'));
+      if(n >= 0.5 && n <= 4 && !out.includes(String(n))) out.push(String(n));
+    });
+    return out;
+  }
+  /* 오류 카드에 보일 값 — 범위 답은 “260 ~ 300”으로 */
+  function displayVal(v){
+    if(v && typeof v === 'object'){
+      const s = [v.min, v.max].map(x => String(x == null ? '' : x).trim()).filter(Boolean).join(' ~ ');
+      return s || '(빈 칸)';
+    }
+    return v;
+  }
+
   function checkField(f, val){
     if(val === undefined || String(val).trim() === '') return false;
+    /* 와이어 지름 — 1개든 2~3개든 유효한 지름이 있으면 합격 */
+    if(f.multi) return parseDias(val).length > 0;
+    /* 전류·전압 범위 — 한 칸만 적어도 되고, 둘 다 적으면 최대 ≥ 최소 */
+    if(f.ui === 'range'){
+      const v = (val && typeof val === 'object') ? val : { min:String(val || ''), max:'' };
+      const num = s => { const m = String(s == null ? '' : s).match(/-?\d+(?:[.,]\d+)?/); return m ? parseFloat(m[0].replace(',', '.')) : NaN; };
+      const a = num(v.min), b = num(v.max);
+      const hasA = !isNaN(a) && a > 0, hasB = !isNaN(b) && b > 0;
+      if(!hasA && !hasB) return false;
+      if(hasA && hasB) return b >= a;
+      return true;
+    }
     /* 자유 입력(와이어 지름·전류·전압) — 유효한 수치나 범위가 있으면 통과 */
     if(f.lenient){
       const nums = String(val).match(/\d+(?:[.,]\d+)?/g);
@@ -856,7 +940,7 @@
 
     const errCard = e => `<div class="err ${e.f.crit ? '' : 'warn'}">
       <div class="eh"><span class="tag">${e.f.crit ? '치명' : '보완'}</span>${e.f.label}${e.empty ? ' — 미기재' : ''}</div>
-      ${e.empty ? '' : `<div class="eb">내 답 · <b>${esc(e.val)}</b></div>`}
+      ${e.empty ? '' : `<div class="eb">내 답 · <b>${esc(displayVal(e.val))}</b></div>`}
       <div class="eb">${e.f.fb}</div>
     </div>`;
     const errHTML = errors.length ? `<div class="err-list">${errors.map(errCard).join('')}</div>` : '';
@@ -879,7 +963,7 @@
             <button class="btn" type="button" id="btnAgain">내 WPS 고쳐보기</button>
             <button class="btn primary" type="button" id="btnRestart2">처음부터</button>
           </div>
-        </div></div></div>`;
+        </div></div>${wireGuideHTML()}</div>`;
 
       (async () => {
         AU.fx('sfx_success', .55);
@@ -939,6 +1023,146 @@
     });
     const rs = $('#btnRestart2', root);
     if(rs) rs.addEventListener('click', restart);
+  }
+
+  /* ======================================================================
+     합격 화면 — 와이어(용접봉) 지름에 따른 생각해 볼 사항
+     교재 p.100 「노즐 높이에 대한 가스의 적정 유량」 · p.425 예제 2 해설
+     ====================================================================== */
+  function wireGuideHTML(){
+    const g = WIRE_GUIDE;
+    if(!g) return '';
+    const dias = parseDias(state.answers.wireDia || '');
+    const mine = dias.length ? dias.map(d => 'Ø' + d).join(' · ') : '기재 없음';
+    const hi = d => dias.includes(d);
+
+    const rows = g.nozzle.groups.map(gr => {
+      const on = gr.dia.some(hi);
+      return gr.rows.map((r, i) => `<tr class="${on ? 'on' : ''}">${
+        i === 0 ? `<th class="dia" rowspan="${gr.rows.length}">${gr.label}${on ? '<small>내 선택</small>' : ''}</th>` : ''
+      }<td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+    }).join('');
+
+    const cases = g.econ.cases.map(c => `<li class="${c.best ? 'best' : ''}">
+        <span class="tag">(${c.id})</span> <b>A = ${c.area} mm²</b> — ${c.name}
+        <p>${c.desc}</p></li>`).join('');
+
+    return `<section class="wire-econ" id="wireEcon" aria-label="${esc(g.title)}">
+      <div class="we-head">
+        <span class="we-kicker">검사 통과 · 생각해 볼 사항</span>
+        <h3>${esc(g.title)}</h3>
+        <p class="we-sub">${esc(g.sub)}</p>
+        <div class="we-mine">내가 적은 지름 <b>${esc(mine)}</b></div>
+      </div>
+
+      <div class="we-grid">
+        <article class="we-card">
+          <h4>${esc(g.nozzle.cap)} <span class="src">${esc(g.nozzle.src)}</span></h4>
+          <table class="we-table">
+            <thead><tr>${g.nozzle.head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <p class="we-note">${esc(g.nozzle.note)}</p>
+        </article>
+
+        <article class="we-card">
+          <h4>${esc(g.stickout.cap)} <span class="src">${esc(g.stickout.src)}</span></h4>
+          <p class="we-body">${g.stickout.body}</p>
+          <div class="we-stick">${stickoutSVG()}
+            <div class="so-cap">점선 CTWD = Stick-out + 리세스(팁 들어감) · 노즐–모재 거리</div>
+          </div>
+        </article>
+      </div>
+
+      <article class="we-card wide">
+        <h4>${esc(g.econ.cap)} <span class="src">${esc(g.econ.src)}</span></h4>
+        <div class="we-econ">
+          <div class="we-svg">${econSVG()}</div>
+          <ul class="we-cases">${cases}</ul>
+        </div>
+        <div class="we-best"><b>가장 경제적인 것 — (d) 한 면 60° 베벨</b>
+          같은 목 두께와 다리길이를 유지하면서 굵은 용접봉·높은 전류를 쓸 수 있어, 단면적은 (a)의 57.8 %로 줄고 패스 수도 줄어듭니다.</div>
+        <p class="we-note">${g.econ.note}</p>
+        <ul class="we-points">${g.econ.points.map(p => `<li>${p}</li>`).join('')}</ul>
+        <div class="we-caveat">${g.econ.caveat}</div>
+      </article>
+
+      <article class="we-card apply">
+        <h4>${esc(g.apply.cap)}</h4>
+        <ul class="we-points">${g.apply.items.map(p => `<li>${p}</li>`).join('')}</ul>
+        <div class="we-checks">
+          <div class="wc-h">강의에서 함께 짚을 현장 포인트</div>
+          <ul class="we-points">${g.apply.checks.map(p => `<li>${p}</li>`).join('')}</ul>
+        </div>
+      </article>
+
+      <p class="we-src">출처 — 배포 교재 p.100 표와 p.425 예제 2 해설을 교육용으로 재구성했습니다. 수치는 교재와 같고, 실제 시공에는 계약 판본과 발주처 시방서를 적용하세요.</p>
+    </section>`;
+  }
+
+  /* 4가지 이음 단면 비교 도식 — 같은 목 두께(t = 10 mm) */
+  function econSVG(){
+    const defs = `<defs>
+      <pattern id="weSteel" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="0" x2="0" y2="7" stroke="#4b5560" stroke-width="1.2"/></pattern>
+      <pattern id="weWeld" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+        <rect width="6" height="6" fill="#2b2219"/><line x1="0" y1="0" x2="0" y2="6" stroke="#c98b3f" stroke-width="1.2"/></pattern>
+    </defs>`;
+
+    const panels = WIRE_GUIDE.econ.cases.map((c, i) => {
+      const x = 14 + i * 182;
+      const upper = c.id === 'a' ? 'M36 96 L36 78 L54 96 Z'
+        : c.id === 'd' ? 'M36 96 L36 60 L76 96 Z'
+        : 'M36 96 L36 68 L56 96 Z';
+      const lower = (c.id === 'a' || c.id === 'c' || c.id === 'd') ? 'M36 112 L36 130 L54 112 Z' : '';
+      const ang = c.id === 'a' ? '' : (c.id === 'd' ? '60°' : '45°');
+      return `<g class="we-panel${c.best ? ' best' : ''}" transform="translate(${x},0)">
+        ${c.best ? '<text class="star" x="30" y="14">★ 가장 경제적</text>' : ''}
+        <rect x="20" y="24" width="16" height="152" fill="#2f3741" stroke="#5a6672" stroke-width="1.1"/>
+        <rect x="20" y="24" width="16" height="152" fill="url(#weSteel)" opacity=".45"/>
+        <rect x="20" y="96" width="126" height="16" fill="#2f3741" stroke="#5a6672" stroke-width="1.1"/>
+        <rect x="20" y="96" width="126" height="16" fill="url(#weSteel)" opacity=".4"/>
+        <path d="${upper}" fill="url(#weWeld)" stroke="#ffb066" stroke-width="1.2"/>
+        ${lower ? `<path d="${lower}" fill="url(#weWeld)" stroke="#ffb066" stroke-width="1.2"/>` : ''}
+        ${ang ? `<text x="41" y="${c.id === 'd' ? 88 : 90}" fill="#ffd9ae" font-size="9" font-family="monospace">${ang}</text>` : ''}
+        <g stroke="#6f7a87" stroke-width=".9">
+          <line x1="20" y1="188" x2="36" y2="188"/>
+          <line x1="20" y1="184" x2="20" y2="192"/><line x1="36" y1="184" x2="36" y2="192"/>
+        </g>
+        <text x="42" y="192" fill="#8b939d" font-size="8.5" font-family="monospace">t = 10</text>
+        <text x="24" y="214" fill="${c.best ? '#8ff0c4' : '#cfd7df'}" font-size="10.5" font-family="monospace">(${c.id})  A = ${c.area} mm²</text>
+      </g>`;
+    }).join('');
+
+    return `<svg viewBox="0 0 744 226" width="100%" role="img"
+      aria-label="같은 목 두께 10mm 필릿 용접의 단면적 비교 (a) 100 (b) 50 (c) 50 (d) 57.8 제곱밀리미터">
+      ${defs}${panels}</svg>`;
+  }
+
+  function stickoutSVG(){
+    return `<svg viewBox="0 0 344 150" width="100%" role="img" aria-label="노즐 높이와 와이어 돌출 길이(Stick-out)">
+      <defs><pattern id="soSteel" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="0" x2="0" y2="7" stroke="#4b5560" stroke-width="1.2"/></pattern></defs>
+      <rect x="30" y="112" width="270" height="16" fill="#2f3741" stroke="#5a6672"/>
+      <rect x="30" y="112" width="270" height="16" fill="url(#soSteel)" opacity=".45"/>
+      <path d="M150 112 L142 100 L158 100 Z" fill="#ffb066" opacity=".85"/>
+      <path d="M112 18 L188 18 L172 60 L128 60 Z" fill="#39424d" stroke="#5a6672" stroke-width="1.2"/>
+      <rect x="116" y="56" width="68" height="7" rx="2" fill="#4b5560"/>
+      <line x1="150" y1="26" x2="150" y2="110" stroke="#e8eef5" stroke-width="2"/>
+      <g stroke="#8b939d" stroke-width=".9">
+        <line x1="88" y1="30" x2="88" y2="110"/>
+        <line x1="84" y1="30" x2="92" y2="30"/><line x1="84" y1="110" x2="92" y2="110"/>
+        <line x1="206" y1="63" x2="206" y2="112"/>
+        <line x1="202" y1="63" x2="210" y2="63"/><line x1="202" y1="112" x2="210" y2="112"/>
+        <line x1="236" y1="30" x2="236" y2="112" stroke-dasharray="3 3"/>
+      </g>
+      <text x="8" y="64" fill="#cfd7df" font-size="9.5">Stick-out</text>
+      <text x="8" y="75" fill="#8b939d" font-size="8">(접촉팁→와이어 끝)</text>
+      <text x="214" y="82" fill="#cfd7df" font-size="9">노즐 높이</text>
+      <text x="214" y="93" fill="#8b939d" font-size="8" font-family="monospace">10~25 mm</text>
+      <text x="248" y="104" fill="#7d8794" font-size="7.5">CTWD</text>
+      <rect x="118" y="56" width="64" height="7" rx="2" fill="none" stroke="#6f7a87" stroke-dasharray="2 2"/>
+    </svg>`;
   }
 
   /* ── 불합격: 철골 붕괴 연출 ─────────────────────────────── */

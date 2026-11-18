@@ -1,10 +1,14 @@
-"""배포본(https://tessios.github.io/welding-project/) 실습형 v4 라이브 검증
+"""배포본(https://tessios.github.io/welding-project/) 실습형 v5 라이브 검증
 
 - 「이 값 넣기」 0건 / 참조 양식 명칭 0건(화면·팝오버 전수)
-- 선택형·직접 입력형 동작, 입열량 직접 계산 입력, 와이어·전류·전압 자유 입력 통과
+- 선택형·직접 입력형 동작, 입열량 직접 계산 입력, 와이어 지름 복수 입력
+- 전류·전압 최소~최대 두 칸 입력(한 칸만 적어도 합격)
+- 합격 후 와이어 지름별 적정 조건·경제성 카드(교재 p.100·p.425) + 내 지름 하이라이트
+- 내레이션 자막은 화면 표기(ASTM A36 · 12 mm · AWS D1.1), 음성은 발음용 문장
+- 배경음악 오리지널 트랙(audio/bgm_terran.mp3) 로드
 - 문항 클릭 열기 / 더블클릭 닫기, 모바일 390×844 근거 크기·더블탭 닫기
 - 성공/파단 엔딩(효과음·내레이션), 콘솔 에러 0
-- 캡처: screenshots/live_v4/
+- 캡처: screenshots/live_v5/
 """
 import asyncio, os, time, json, sys
 from playwright.async_api import async_playwright
@@ -12,7 +16,7 @@ from playwright.async_api import async_playwright
 FORBIDDEN = "Form " + "J-2"   # 화면에 남아 있으면 안 되는 참조 양식 명칭
 BASE = "https://tessios.github.io/welding-project/"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "screenshots", "live_v4")
+OUT = os.path.join(ROOT, "screenshots", "live_v5")
 os.makedirs(OUT, exist_ok=True)
 
 ANSWERS = {
@@ -25,9 +29,9 @@ ANSWERS = {
     "thickRange": "Fillet Welds < 75 mm",
     "process": "FCAW (Semi-auto)",
     "polarity": "DC · DCEP (역극성)",
-    "wireDia": "1.4",
-    "current": "280",
-    "voltage": "30",
+    "wireDia": "1.2, 1.4",
+    "current": ("260", "300"),
+    "voltage": ("28", "30"),
     "filler": "E71T-1C (A5.20)",
     "fano": "참고 F-6 / A-1",
     "gas": "100% CO₂ · 15–30 L/min · Nozzle #4",
@@ -46,6 +50,9 @@ async def set_field(pg, fid, val):
     el = pg.locator(sel)
     if await el.locator("select").count():
         await el.locator("select").select_option(value=val)
+    elif await el.locator(".range-input").count():
+        await el.locator('input[data-range="min"]').fill(val[0])
+        await el.locator('input[data-range="max"]').fill(val[1])
     elif await el.locator("input").count():
         await el.locator("input").fill(val)
     else:
@@ -110,6 +117,14 @@ async def main():
         ok("배지(필수14·추가필수1·비필수5)",
            badges.count("필수") == 14 and badges.count("추가필수") == 1 and badges.count("비필수") == 5,
            {x: badges.count(x) for x in set(badges)})
+        ranges = await pg.eval_on_selector_all(".range-input", """els => els.map(e => ({
+            fid: e.dataset.rangeField, n: e.querySelectorAll('input').length }))""")
+        ok("5차 — 전류·전압 최소~최대 두 칸",
+           [r["fid"] for r in ranges] == ["current", "voltage"] and all(r["n"] == 2 for r in ranges), ranges)
+        narr = await pg.inner_text("#narrBar")
+        ok("5차 — 자막 표기(AWS D1.1/D1.1M:2025)",
+           "AWS D1.1/D1.1M:2025" in narr
+           and not any(x in narr for x in ["에이에스티엠", "삼십육", "밀리미터", "에이더블유에스"]), narr[:70])
         await pg.screenshot(path=os.path.join(OUT, "04-wps.png"))
 
         # 팝오버 전수 — 값 넣기/양식 문구 0건, 입열량 정답 미노출
@@ -154,10 +169,24 @@ async def main():
         await pg.screenshot(path=os.path.join(OUT, "07-filled.png"))
         await pg.click("#btnSubmit")
         await pg.wait_for_timeout(1600)
-        ok("라이브 합격 100점(자유 입력 1.4·280·30)", (await pg.inner_text(".res-score .n")) == "100")
+        ok("라이브 합격 100점(범위 260~300 A · 28~30 V · 1.2, 1.4 mm)",
+           (await pg.inner_text(".res-score .n")) == "100")
         ok("성공 효과음", any("sfx_success" in u for u in audio))
         await pg.wait_for_timeout(1200)
         await pg.screenshot(path=os.path.join(OUT, "08-pass.png"))
+        ok("5차 — 합격 화면 와이어 가이드", await pg.locator("#wireEcon").count() == 1)
+        we = await pg.inner_text("#wireEcon")
+        ok("5차 — 교재 표·경제성 수치",
+           all(s in we for s in ["15~20", "20~25", "A = 57.8 mm²", "60°", "Stick-out"]), we[:80])
+        ok("5차 — 내 지름 하이라이트(3행)", await pg.locator("#wireEcon .we-table tr.on").count() == 3,
+           await pg.locator("#wireEcon .we-table tr.on").count())
+        ok("5차 — 배경음악 오리지널 트랙", any("bgm_terran" in u for u in audio))
+        await pg.eval_on_selector("#wireEcon", "e => e.scrollIntoView({block:'start'})")
+        await pg.wait_for_timeout(400)
+        await pg.screenshot(path=os.path.join(OUT, "08b-pass-guide.png"))
+        await pg.evaluate("window.scrollBy(0,700)")
+        await pg.wait_for_timeout(300)
+        await pg.screenshot(path=os.path.join(OUT, "08c-pass-guide-econ.png"))
         end_ok = False
         for _ in range(60):
             await pg.wait_for_timeout(700)
@@ -175,6 +204,7 @@ async def main():
         await pg.screenshot(path=os.path.join(OUT, "09-collapse.png"))
         await pg.wait_for_timeout(2800)
         ok("부적합 배지", "부적합" in await pg.inner_text(".res-badge"))
+        ok("5차 — 불합격 화면에는 가이드 없음", await pg.locator("#wireEcon").count() == 0)
         await pg.screenshot(path=os.path.join(OUT, "10-fail.png"))
         end_fail = False
         for _ in range(70):
