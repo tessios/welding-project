@@ -3,60 +3,148 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>WPS 실습실 · AWS D1.1 · Carbon Steel</title>
-<meta name="description" content="AWS D1.1 탄소강 구조물 WPS 독도·변수 시뮬레이션·작성·채점 실습 (교육용)" />
+<title>WPS작성 실습 · 철골 필렛 · AWS D1.1</title>
+<meta name="description" content="전화 한 통으로 시작되는 하루 — SM275 철골 필렛 용접의 WPS 한 장을 직접 작성하고 채점받는 강의 실습 웹앱 (교육용)" />
+<meta name="theme-color" content="#07080a" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="logo" aria-hidden="true">W</span>
-      <div class="brandtxt">
-        <b>WPS 실습실</b>
-        <em>AWS D1.1 · Carbon Steel</em>
-      </div>
-    </div>
-    <nav class="stepper" id="stepper" aria-label="단계"></nav>
-    <div class="topright">
-      <span class="timer" id="timer" title="경과 시간">00:00</span>
-      <button class="ghost" id="btnGlossary" type="button">사전</button>
-      <button class="ghost" id="btnHome" type="button">홈</button>
-    </div>
-  </header>
 
-  <div class="watermark" aria-hidden="true">교육용 — 실제 제작에 사용 금지</div>
-
-  <main id="app">
-    <section id="s0" class="screen"></section>
-    <section id="s1" class="screen"></section>
-    <section id="s2" class="screen"></section>
-    <section id="s3" class="screen"></section>
-    <section id="s4" class="screen"></section>
-    <section id="s5" class="screen"></section>
-    <section id="s6" class="screen"></section>
-  </main>
-
-  <footer class="pagefoot">
-    <span>교육용 실습 자료 · WPS·PQR·과제서는 모두 가상 문서입니다.</span>
-    <span class="footlinks">
-      <button type="button" class="linkish" id="btnInstructor">강사 모드</button>
-    </span>
-  </footer>
-
-  <div class="overlay" id="overlay" hidden>
-    <div class="sheet" role="dialog" aria-modal="true" aria-label="조항·용어 사전">
-      <div class="sheet-head">
-        <b>조항 · 용어 사전</b>
-        <input id="glossSearch" type="search" placeholder="조항 번호나 용어로 찾기 (예: 5.8, F-No., 백킹)" />
-        <button type="button" class="ghost" id="glossClose">닫기</button>
-      </div>
-      <div class="sheet-body" id="glossBody"></div>
+<!-- ── 상단 바 ─────────────────────────────────────────────── -->
+<header class="site-top" id="siteTop">
+  <div class="brand">
+    <span class="brand-mark">W</span>
+    <div class="brand-txt">
+      <b>WPS작성 실습</b>
+      <em>철골 필렛 · AWS D1.1</em>
     </div>
   </div>
+  <div class="top-right">
+    <div class="progress-dots" id="progressDots" aria-hidden="true">
+      <i></i><i></i><i></i><i></i>
+    </div>
+    <button class="pill-btn" id="btnRestart" type="button">처음부터</button>
+  </div>
+</header>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<main class="stage" id="stage">
 
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <!-- ── 0. 랜딩 ───────────────────────────────────────────── -->
+  <section class="scene show" id="scene-landing" aria-label="표지">
+    <div class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="dot"></span> 철골 현장 · 내일 07:00 첫 아크</div>
+        <h1 class="hero-title"><span class="t1">WPS작성</span><br><span class="t2">실습</span></h1>
+        <p class="hero-lede">
+          전화 한 통으로 시작되는 하루입니다. 도면 한 장, 강재 두께, 그리고 규격 한 권 —
+          <b>용접절차서(WPS) 한 장을 당신이 씁니다.</b>
+        </p>
+        <dl class="hero-facts">
+          <div><dt>모재</dt><dd>SM275 · 12 mm</dd></div>
+          <div><dt>이음</dt><dd>필렛 6 mm · 3F</dd></div>
+          <div><dt>기준</dt><dd>AWS D1.1/D1.1M</dd></div>
+        </dl>
+      </div>
+
+      <aside class="hero-panel" aria-label="현장 개요">
+        <div class="panel-head">
+          <span class="k">현장 상황판</span>
+          <span class="v mono">07:42 · 사무소</span>
+        </div>
+        <svg viewBox="0 0 440 260" width="100%" role="img" aria-label="보 웨브와 브래킷의 필렛 접합 단면 개요">
+          <defs>
+            <pattern id="heroHatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="6" stroke="#333c46" stroke-width="1.1"/>
+            </pattern>
+            <linearGradient id="heroSteel" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#404a56"/><stop offset=".55" stop-color="#232a33"/><stop offset="1" stop-color="#12171c"/>
+            </linearGradient>
+            <linearGradient id="heroWeld" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#aab6c4"/><stop offset="1" stop-color="#5d6a78"/>
+            </linearGradient>
+            <linearGradient id="heroGlow" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#ffb066"/><stop offset="1" stop-color="#ff7a1a"/>
+            </linearGradient>
+            <filter id="heroBlur"><feGaussianBlur stdDeviation="4"/></filter>
+          </defs>
+
+          <!-- 웨브 -->
+          <rect x="158" y="30" width="26" height="196" fill="url(#heroSteel)"/>
+          <rect x="158" y="30" width="26" height="196" fill="url(#heroHatch)" opacity=".5"/>
+          <rect x="158" y="30" width="26" height="196" fill="none" stroke="#4e5865" stroke-width="1.1"/>
+
+          <!-- 브래킷 -->
+          <rect x="184" y="116" width="204" height="17" fill="url(#heroSteel)"/>
+          <rect x="184" y="116" width="204" height="17" fill="url(#heroHatch)" opacity=".45"/>
+          <rect x="184" y="116" width="204" height="17" fill="none" stroke="#4e5865" stroke-width="1.1"/>
+          <circle cx="366" cy="124.5" r="3.6" fill="#0b0f13" stroke="#4e5865"/>
+          <circle cx="330" cy="124.5" r="3.6" fill="#0b0f13" stroke="#4e5865"/>
+
+          <!-- 필렛 비드 -->
+          <path d="M184 116 L184 94 L210 116 Z" fill="url(#heroWeld)"/>
+          <path d="M184 133 L184 155 L210 133 Z" fill="url(#heroWeld)"/>
+          <path d="M184 94 L210 116" stroke="url(#heroGlow)" stroke-width="1.6" filter="url(#heroBlur)" opacity=".55"/>
+          <path d="M184 155 L210 133" stroke="url(#heroGlow)" stroke-width="1.6" filter="url(#heroBlur)" opacity=".55"/>
+          <path d="M184 94 L210 116 M184 155 L210 133" stroke="#ffb066" stroke-width="1.1" opacity=".9"/>
+
+          <!-- 치수 -->
+          <g stroke="#4a545f" stroke-width="1">
+            <line x1="158" y1="242" x2="184" y2="242"/>
+            <line x1="158" y1="236" x2="158" y2="248"/>
+            <line x1="184" y1="236" x2="184" y2="248"/>
+            <line x1="214" y1="94" x2="214" y2="155" stroke-dasharray="3 3" stroke="#3d4652"/>
+          </g>
+          <text x="164" y="258" fill="#7d8794" font-size="8.5" font-family="monospace">12</text>
+          <text x="220" y="152" fill="#ffb066" font-size="8.5" font-family="monospace" opacity=".9">6</text>
+
+          <!-- 리더 -->
+          <path d="M236 88 L280 70 L360 70" fill="none" stroke="#3d4652" stroke-width="1"/>
+          <text x="288" y="66" fill="#7d8794" font-size="9" font-family="monospace">FILLET 6 · 3F</text>
+          <text x="288" y="52" fill="#5f6a76" font-size="8.5" font-family="monospace">SM275 · 12t</text>
+        </svg>
+        <div class="panel-rows">
+          <div class="row"><span>도면</span><span>ST-401 · B-12</span></div>
+          <div class="row"><span>자재 입고</span><span>SM275 · 12 mm</span></div>
+          <div class="row hot"><span>절차서(WPS)</span><span>없음 — 오늘 작성</span></div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="hero-cta">
+      <button class="btn-start" id="btnStart" type="button">
+        시작
+        <span class="arrow" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h11M9 3.5L13.5 8 9 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </button>
+      <span class="cta-hint">버튼 하나로 시작 — 약 12분 · 마우스 오버 또는 터치로 규격 확인</span>
+    </div>
+
+    <div class="landing-foot">
+      <span>교육용 실습 자료 · 화면의 WPS·도면·서명은 모두 가상입니다</span>
+      <span class="mono">SM275 / FILLET / 3F</span>
+    </div>
+  </section>
+
+  <!-- ── 1. 전화 ────────────────────────────────────────────── -->
+  <section class="scene" id="scene-call" aria-label="현장 전화"></section>
+
+  <!-- ── 2. 브리핑 ──────────────────────────────────────────── -->
+  <section class="scene" id="scene-brief" aria-label="용접 부위 브리핑"></section>
+
+  <!-- ── 3. 공백 WPS ────────────────────────────────────────── -->
+  <section class="scene" id="scene-wps" aria-label="WPS 작성"></section>
+
+  <!-- ── 4. 결과 ────────────────────────────────────────────── -->
+  <section class="scene" id="scene-result" aria-label="제출 결과"></section>
+
+</main>
+
+<div class="pop" id="pop" role="dialog" aria-live="polite" hidden></div>
+<div class="fracture-flash" id="flash" aria-hidden="true"></div>
+<div class="impact-text" id="impactText" aria-hidden="true">파단</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

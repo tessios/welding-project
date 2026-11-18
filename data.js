@@ -1,541 +1,249 @@
 /* =========================================================================
-   WPS 실습실 — AWS D1.1 · Carbon Steel  (교육용 데이터)
-   모든 수치는 교육 목적의 대표값입니다. 실제 제작에는 해당 판본 원문을 적용하세요.
+   WPS작성 실습 — 시나리오 · WPS 칸 정의 · 채점 데이터
+   기준: AWS D1.1/D1.1M:2020 · 탄소강 필렛 (교육용)
+   · 팝오버의 AWS 문구는 원문 인용이 아닌 요약입니다.
+   · [확인 필요] 표시 값은 배포 전 판본 원문 대조 대상입니다.
+   · 인물·회사·도면·PQR 번호는 모두 가상입니다.
    ========================================================================= */
 
-const APP = {
-  title: 'WPS 실습실',
-  subtitle: 'AWS D1.1 · Carbon Steel',
-  edition: 'AWS D1.1/D1.1M:2020 기준(2025 개정 번호는 병기)',
-  watermark: '교육용 — 실제 제작에 사용 금지',
-  version: 'v1.0'
-};
+const SCENARIO = {
+  meta: {
+    site: '해외 철골 현장 · 시공팀',
+    time: '07:42',
+    place: '철골 현장 품질 사무소',
+    caller: '박 팀장',
+    callerRole: '시공팀 · 철골',
+    me: '이프로',
+    meRole: '품질관리자'
+  },
 
-/* ---------------------------------------------------------------- 1. 코드 사전 */
-const GLOSSARY = [
-  {
-    id: 'g5-6', key: 'Clause 5 / Clause 6', label: '5', title: '사전인정(Clause 5) vs 시험인정(Clause 6)',
-    summary: 'Clause 5는 코드가 미리 인정한 조건만 지키면 PQR 없이 WPS를 쓸 수 있고, Clause 6은 시험편으로 인정받는 경로입니다.',
-    body: '사전인정 WPS는 모재(Table 5.3)·이음상세(Figure 5.1~5.3)·공정(Table 5.1~5.4)·용가재·예열(Table 5.8)이 모두 코드 범위 안에 있어야 성립합니다. 하나라도 벗어나면 Clause 6으로 시험인정을 받아 PQR을 만들어야 합니다.',
-    tag: 'D1.1 5.1, 5.2 / 6.1'
-  },
-  {
-    id: 'g53', key: 'Table 5.3', label: '5.3', title: '승인 모재와 Group I~IV',
-    summary: '사전인정 WPS에 쓸 수 있는 강재 목록입니다. 같은 Group 안에서만 추가 시험 없이 모재를 바꿀 수 있습니다.',
-    body: 'Group I은 Fy 36 ksi급(예: A36 3/4" 이하, A53 Gr.B), Group II는 50 ksi급(A992, A572 Gr.50, A36 3/4" 초과, A588), Group III는 A572 Gr.60·65, Group IV는 A709 Gr.70W·A852 같은 담금질·뜨임강입니다. A514처럼 목록에 없는 강재는 Clause 6 시험인정 대상입니다. (2025 Edition은 Table 5.6, Group V=A913 Gr.80 신설)',
-    tag: 'D1.1 Table 5.3 (2020) / 5.6 (2025)'
-  },
-  {
-    id: 'g58', key: 'Table 5.8', label: '5.8', title: '최소 예열·층간온도',
-    summary: '강재 범주(A~D)와 최후 부재 두께로 최소 예열·최소 층간온도를 정합니다. 두 값은 같습니다.',
-    body: '범주 A는 비저수소 SMAW(E6010·E6011·E6013), B는 저수소 용접(E7018·FCAW·GMAW·SAW)을 쓰는 일반 구조강, C는 60~70 ksi급, D는 H8 이하 용착금속을 쓰는 제한 강재입니다. 32°F(0°C) 표기는 “강재가 빙점 이상이면 별도 가열 불필요”이며, 빙점 아래에서는 70°F(20°C)까지 예열해 유지합니다. (2025 Edition은 Table 5.11, 범주 E~G 추가)',
-    tag: 'D1.1 5.7, Table 5.8 (2020) / 5.11 (2025)'
-  },
-  {
-    id: 'g52', key: 'Table 5.2', label: '5.2', title: '사전인정 WPS의 필수변수',
-    summary: '사전인정 WPS에서 지켜야 하는 필수변수 목록입니다. 시험인정 WPS의 필수변수(Table 6.6)와 번호가 다릅니다.',
-    body: '사전인정 경로에서는 이 표의 항목이 코드 한계를 벗어나면 사전인정이 깨져 Clause 6 시험인정으로 넘어갑니다. 시험인정 경로의 변경 판정은 Table 6.6(필수)과 Table 6.7(충격시험 보충)으로 합니다. (2025 Edition은 Table 5.5)',
-    tag: 'D1.1 Table 5.2 (2020) / 5.5 (2025)'
-  },
-  {
-    id: 'g61', key: 'Table 6.1', label: '6.1', title: '평판 시험 자세 인정 범위',
-    summary: '시험한 자세가 생산에서 어느 자세까지 인정되는지 정합니다. 1G 시험은 아래보기(F)만 인정합니다.',
-    body: '1G→F, 2G→F·H, 3G→F·V, 4G→F·OH, 3G+4G 또는 2G+3G+4G→전 자세입니다. 필렛은 1F~4F로 따로 시험합니다.',
-    tag: 'D1.1 Table 6.1 (2020)'
-  },
-  {
-    id: 'g62', key: 'Table 6.2', label: '6.2', title: 'CJP 그루브 시험의 인정 두께',
-    summary: '시험편 두께 T로 생산 모재 두께 범위가 정해집니다. 1"(25 mm) 이상으로 시험하면 두께 제한이 없어집니다.',
-    body: 'T가 3~10 mm 또는 10~25 mm 구간이면 인정 두께는 최소 1/8"(3 mm)에서 최대 2T입니다. T가 25 mm 이상이면 최소 3 mm에서 무제한입니다. 백가우징 없이 시험한 스퀘어 그루브는 최대 두께가 시험 두께로 제한됩니다.',
-    tag: 'D1.1 Table 6.2 (2020)'
-  },
-  {
-    id: 'g66', key: 'Table 6.6', label: '6.6', title: 'PQR 필수변수 변경(재인정)',
-    summary: '공정·모재 Group·용가재 분류·F-No.·자세·그루브 형상·백킹 삭제·전류 종류/극성·입열량 같은 변경은 새 PQR이 필요합니다.',
-    body: '필수변수는 강도·연성에 영향을 주는 값입니다. 번호를 헷갈리기 쉬운데, D1.1에서 Table 6.1은 자세 인정표이고 Table 6.6이 재인정이 필요한 필수변수 표입니다. 충격시험(CVN)이 요구되는 공사에서는 Table 6.7의 보충 필수변수가 더해져 입열량·층간온도·패스 방식까지 재인정 사유가 됩니다.',
-    tag: 'D1.1 6.8, Table 6.6 / 6.7'
-  },
-  {
-    id: 'g59', key: '5.9', label: '5.9', title: '용접후열처리(PWHT)',
-    summary: 'D1.1은 원칙적으로 PWHT를 요구하지 않습니다. 계약·설계가 요구하면 열처리 조건을 절차에 넣고 인정받아야 합니다.',
-    body: 'PWHT 여부·조건은 필수변수입니다. 한 번 “없음”으로 인정받은 절차에 PWHT를 넣거나, 반대로 PWHT 절차에서 빼면 재인정 대상입니다.',
-    tag: 'D1.1 5.9, 6.8'
-  },
-  {
-    id: 'gfno', key: 'F-Number', label: 'F', title: 'F-No. — 용접 난이도 분류',
-    summary: 'F-1 고산화철, F-2 티타니아, F-3 셀룰로오스, F-4 저수소 피복봉, F-5 오스테나이트/듀플렉스, F-6 솔리드·플럭스코어드 와이어.',
-    body: 'F-No.가 바뀌면 필수변수입니다. 같은 F-No. 안에서의 분류 변경(예: E7016→E7018, 둘 다 F4)은 WPS 개정으로 처리됩니다. 강도 수준이 올라가는 변경은 F-No.가 같아도 재인정 대상입니다.',
-    tag: 'D1.1 Table 6.6, AWS A5.x'
-  },
-  {
-    id: 'gano', key: 'A-Number', label: 'A', title: 'A-No. — 용착금속 화학성분 분류',
-    summary: 'A-1 탄소강, A-2 0.5Mo, A-3~A-5 Cr-Mo, A-6 마르텐사이트, A-7 페라이트, A-8·A-9 Cr-Ni, A-10 Ni, A-11·A-12 Mn·Ni계.',
-    body: '탄소강 구조물 실습에서는 대부분 A-1입니다. A-No.가 달라지면 용착금속 성분이 달라지므로 필수변수로 취급합니다.',
-    tag: 'D1.1, AWS A5.x'
-  },
-  {
-    id: 'gjoint', key: 'Figure 5.1', label: '5.1F', title: '사전인정 이음상세 표기법',
-    summary: 'B=맞대기, T=T이음, C=코너, TC=T/코너. 뒤의 U·L·P는 두께 제한 없음·제한 있음·부분용입을 뜻하고, 끝의 -S는 영구 철제 백킹, -GF는 백가우징 후 이면 용접입니다.',
-    body: '예: B-U2a-S는 맞대기(B)·두께무제한(U)·상세 2a·철제 백킹 유지(S)입니다. 상세 치수(개선각·루트 개구부)가 Figure의 허용 범위를 벗어나면 사전인정이 아닙니다. 도면·WPS에는 “single-V groove”가 아니라 이 상세 기호를 적어야 합니다.',
-    tag: 'D1.1 Figure 5.1~5.3'
-  },
-  {
-    id: 'ghi', key: '입열량', label: 'H', title: '입열량(Heat Input)',
-    summary: 'H = (전압 × 전류 × 60) ÷ 이동속도. 단위를 mm·kJ로 맞추면 kJ/mm입니다.',
-    body: '예: 26 V × 240 A × 60 ÷ 300 mm/min = 1.25 kJ/mm. 충격시험이 요구되는 공사에서는 인정받은 입열량보다 커지는 변경이 재인정 사유가 됩니다(Table 6.7).',
-    tag: 'D1.1 6.8, Table 6.7'
-  },
-  {
-    id: 'gback', key: 'Backing', label: 'BK', title: '백킹(받침)과 백가우징',
-    summary: '백킹은 루트 용락을 막는 받침입니다. 백킹을 “빼는” 변경은 재인정, “더하는” 변경은 재인정 사유가 아닙니다.',
-    body: '철제 백킹은 모재와 같은 Group을 쓰고 용접 후 제거하지 않는 것이 원칙입니다(제거는 도면이 허용할 때만). 이면 완전용입을 위해 백가우징으로 이면을 파내는 절차는 -GF 계열 상세로 표기합니다.',
-    tag: 'D1.1 5.4, Table 6.6'
-  },
-  {
-    id: 'gpos', key: 'Position', label: 'G', title: '자세 1G~4G / 1F~4F',
-    summary: '그루브는 1G 아래보기, 2G 수평, 3G 수직, 4G 위보기. 필렛은 1F~4F입니다.',
-    body: '수직 자세에서 상진↔하진의 변경은 필수변수입니다. 현장 WPS에는 시험으로 인정받은 자세만 적을 수 있고, 도면이 요구하는 자세가 인정 범위 밖이면 추가 시험이 필요합니다.',
-    tag: 'D1.1 Table 6.1, 6.8'
-  },
-  {
-    id: 'gcvn', key: 'CVN', label: 'CVN', title: '충격시험(CVN) 요구 공사',
-    summary: '충격시험이 요구되면 Table 6.7의 보충 필수변수가 함께 적용됩니다.',
-    body: '입열량 상한, 층간온도 상한, 단층↔다층, 패스당 두께 같은 항목이 이때 재인정 사유가 됩니다. 같은 변경이라도 CVN 요구가 없으면 WPS 개정으로 끝나는 경우가 많습니다.',
-    tag: 'D1.1 Table 6.7'
-  },
-  {
-    id: 'gwpq', key: 'WPQ', label: 'W', title: '용접사 자격(WPQ)과 WPS의 구분',
-    summary: 'WPS는 “절차”의 자격이고 WPQ는 “사람”의 자격입니다. WPS가 허용해도 용접사가 그 자세·두께를 인정받지 못하면 용접할 수 없습니다.',
-    body: '예를 들어 WPS가 전 자세를 허용해도 1G로 시험한 용접사는 아래보기만 용접할 수 있습니다. 절차 변수와 용접사 변수를 섞으면 현장에서 그대로 사고가 됩니다.',
-    tag: 'D1.1 6.12'
-  },
-  {
-    id: 'gpre', key: '예열', label: 'PH', title: '예열과 층간온도',
-    summary: '예열은 첫 아크 전 모재 온도, 층간온도는 패스 사이에 식어도 유지해야 하는 하한(및 상한)입니다.',
-    body: '예열은 저온균열·경화조직·수소 유입을 막습니다. 측정은 용접부에서 가장 두꺼운 부재 두께만큼, 최소 75 mm 떨어진 곳까지 여러 방향에서 합니다. Table 5.8 값보다 낮추는 변경은 재인정 대상입니다.',
-    tag: 'D1.1 5.7, 7.6'
-  },
-  {
-    id: 'gveil', key: '교육용', label: '!', title: '이 앱의 성격',
-    summary: '강의 실습용입니다. 여기 나오는 WPS·PQR·과제서는 모두 가상 문서이고, 수치는 원문 대조 전 교육용 대표값입니다.',
-    body: '실제 제작·검사에는 계약에서 지정한 판본의 AWS D1.1 원문과 발주처 시방서를 적용해야 합니다. 화면의 모든 판정은 “왜 그런지 읽는 법”을 익히기 위한 것입니다.',
-    tag: '—'
-  }
-];
-
-/* ---------------------------------------------------------------- 2. 참조 데이터 */
-const PREHEAT = {
-  bands: ['≤ 20 mm (3/4")', '20 ~ 38 mm (3/4"~1½")', '38 ~ 65 mm (1½"~2½")', '> 65 mm (2½" 초과)'],
-  cats: {
-    A: { name: 'A · 비저수소 SMAW', c: [0, 65, 110, 150], f: [32, 150, 225, 300] },
-    B: { name: 'B · 저수소 용접', c: [0, 10, 65, 110], f: [32, 50, 150, 225] },
-    C: { name: 'C · 60~70 ksi급', c: [10, 65, 110, 150], f: [50, 150, 225, 300] },
-    D: { name: 'D · H8 이하 용착금속', c: [0, 0, 0, 0], f: [32, 32, 32, 32] }
-  },
-  note: '32°F(0°C)는 “강재가 빙점 이상이면 별도 가열 불필요”를 뜻합니다. 빙점 아래에서는 70°F(20°C)까지 예열해 용접 중 유지합니다. Table 5.8(2020) / Table 5.11(2025)'
-};
-
-const BASE_METALS = [
-  { spec: 'ASTM A36', grade: 'Gr.36', group: 'I (t ≤ 3/4") / II (t > 3/4")', cat: 'B', fy: '250 MPa (36 ksi)' },
-  { spec: 'ASTM A572', grade: 'Gr.42', group: 'II', cat: 'B', fy: '290 MPa (42 ksi)' },
-  { spec: 'ASTM A572', grade: 'Gr.50', group: 'II', cat: 'B', fy: '345 MPa (50 ksi)' },
-  { spec: 'ASTM A992', grade: 'Gr.50', group: 'II', cat: 'B', fy: '345 MPa (50 ksi)' },
-  { spec: 'ASTM A588', grade: 'Gr.A/B', group: 'II', cat: 'B', fy: '345 MPa (50 ksi)' },
-  { spec: 'ASTM A709', grade: 'Gr.50W', group: 'II', cat: 'B', fy: '345 MPa (50 ksi)' },
-  { spec: 'ASTM A572', grade: 'Gr.60', group: 'III', cat: 'C', fy: '415 MPa (60 ksi)' },
-  { spec: 'ASTM A572', grade: 'Gr.65', group: 'III', cat: 'C', fy: '450 MPa (65 ksi)' },
-  { spec: 'ASTM A709', grade: 'Gr.70W', group: 'IV', cat: 'C', fy: '485 MPa (70 ksi)' },
-  { spec: 'ASTM A514', grade: 'Gr.B', group: '목록 없음', cat: '-', fy: '690 MPa (100 ksi)', blocked: '사전인정 대상이 아닙니다. Table 6.9 계열 강재로 Clause 6 시험인정이 필요합니다.' }
-];
-
-const FILLERS = [
-  { class: 'E6010', process: 'SMAW', f: 3, a: 1, strength: '60 ksi', lowH: false, spec: 'A5.1', note: '셀룰로오스계. 루트 전용, 비저수소' },
-  { class: 'E6011', process: 'SMAW', f: 3, a: 1, strength: '60 ksi', lowH: false, spec: 'A5.1', note: '셀룰로오스계. 교류 사용 가능' },
-  { class: 'E7016', process: 'SMAW', f: 4, a: 1, strength: '70 ksi', lowH: true, spec: 'A5.1', note: '저수소. DCEP' },
-  { class: 'E7018', process: 'SMAW', f: 4, a: 1, strength: '70 ksi', lowH: true, spec: 'A5.1', note: '저수소. 구조물 표준. 보관·건조 관리' },
-  { class: 'ER70S-6', process: 'GMAW', f: 6, a: 1, strength: '70 ksi', lowH: true, spec: 'A5.18', note: '솔리드 와이어. CO2/혼합가스' },
-  { class: 'ER70S-3', process: 'GMAW', f: 6, a: 1, strength: '70 ksi', lowH: true, spec: 'A5.18', note: '솔리드 와이어. 청정 모재용' },
-  { class: 'E71T-1', process: 'FCAW', f: 6, a: 1, strength: '70 ksi', lowH: true, spec: 'A5.20', note: '가스 차폐 플럭스코어드(CO2). 가장 흔한 구조용' },
-  { class: 'E71T-8', process: 'FCAW', f: 6, a: 1, strength: '70 ksi', lowH: true, spec: 'A5.20', note: '자기 차폐(가스 불필요). 차폐 방식이 다름' },
-  { class: 'ER70S-6 (GMAW-S 제외)', process: 'GMAW', f: 6, a: 1, strength: '70 ksi', lowH: true, spec: 'A5.18', note: '단락이행(GMAW-S)은 사전인정 대상 아님' }
-];
-
-const POSITIONS = [
-  { test: '1G', kr: '아래보기(Flat)', qualifies: 'F' },
-  { test: '2G', kr: '수평(Horizontal)', qualifies: 'F · H' },
-  { test: '3G', kr: '수직(Vertical)', qualifies: 'F · V' },
-  { test: '4G', kr: '위보기(Overhead)', qualifies: 'F · OH' },
-  { test: '3G + 4G', kr: '수직 + 위보기', qualifies: 'F · V · OH (전 자세)' },
-  { test: '2G + 3G + 4G', kr: '세 자세 시험', qualifies: '전 자세(All)' }
-];
-
-const THICKNESS_RULE = {
-  rows: [
-    { t: '3 ~ 10 mm (1/8"~3/8")', q: '3 mm ~ 2T' },
-    { t: '10 ~ 25 mm (3/8"~1")', q: '3 mm ~ 2T' },
-    { t: '25 mm (1") 이상', q: '3 mm ~ 무제한' }
+  /* ── 장면 1: 전화 (지직— = 끊긴 정보) ─────────────────── */
+  call: [
+    { who:'박', t:'어, 이프로! 바빠? 바쁘지. 금방 끝낼게.' },
+    { who:'이', t:'네 팀장님, 말씀하세요.', me:true },
+    { who:'박', t:'내일 보–브래킷 필렛 용접을 해야 되는데 <b>WPS가 없어</b>. 감리에서 WPS 없으면 아크 한 번도 못 띄운대. 내일 오전 가능할까?', strong:true },
+    { who:'이', t:'오전이요…? 일단 정보 좀 주세요. 재질이랑 두께요.', me:true },
+    { who:'박', t:'SM275, 12미리. 보 웨브에 브래킷 세워서 붙이는 거라 세로로 올라가야 돼. 장비는 CO₂ 반자동, 와이어는 늘 쓰던 <i class="glitch">[지직—]</i>…' },
+    { who:'이', t:'팀장님, 와이어 뭐라고요? 잘 안 들렸어요.', me:true },
+    { who:'박', t:'아 여기 크레인 소리 때문에… 암튼 늘 쓰던 거! 그리고 내일 아침에 춥다던데 그거 뭐 <i class="glitch">[지직—]</i> 해야 되나? 작년엔 그냥 했는데.' },
+    { who:'이', t:'예열이요? 기온 몇 도래요?', me:true },
+    { who:'박', t:'몰라, 그건 니가 찾아봐. 그리고 이거 그 뭐냐, <b>시험 안 하고 바로 쓰는 WPS</b> 있잖아. 그걸로 하면 되지? <i class="glitch">[지직—]</i>… 나 지금 타워 올라가야 돼. 끊는다!', strong:true },
+    { who:'이', t:'팀장님? 팀장님…!', me:true }
   ],
-  calc: function (T) {
-    if (!(T > 0)) return null;
-    if (T >= 25) return { min: 3, max: Infinity, label: '3 mm ~ 무제한' };
-    return { min: 3, max: Math.round(2 * T * 10) / 10, label: '3 mm ~ ' + Math.round(2 * T * 10) / 10 + ' mm (2T)' };
-  }
+
+  monologue: [
+    '재질은 <span class="q">SM275</span>, 두께 12, 세로 필렛. 받은 건 이게 전부입니다.',
+    '와이어는 “늘 쓰던 거”, 예열은 “작년엔 그냥 했다”, 그리고 “시험 안 하는 WPS로 하면 되지?”…',
+    'SM275가 그 “시험 안 하는 WPS” 목록에 있던가. 없으면 근거가 되는 <span class="q">PQR</span>이 있어야 합니다.',
+    '내일 아침 첫 아크 전까지, 빈칸을 근거로 다 채워야 합니다.'
+  ],
+
+  /* ── 장면 4: 성공 엔딩 통화 ─────────────────────────────── */
+  successCall: [
+    { who:'박', t:'이프로! 어제 그 절차서, 용접사가 그대로 보고 했어. 오전에 깔끔하게 끝났어.' },
+    { who:'박', t:'감리가 WPS 보더니 “PQR 근거까지 딱 붙어 있네” 하더라. 아침에 예열 안 했으면 큰일 날 뻔했어.' },
+    { who:'박', t:'고마워 이프로. 덕분에 중요한 용접 잘 마무리했어. 역시 최고.', strong:true }
+  ],
+
+  failCall: { who:'박', t:'이프로… 브래킷 필렛에서 금 갔대. 감리가 작업 중지 걸고 WPS 다시 보재.' }
 };
 
-/* ---------------------------------------------------------------- 3. 독도용 WPS */
-const WPS = {
-  no: 'ED-WPS-001', rev: '0', date: '2026-01-05', page: '1 / 1',
-  project: '가온 물류센터 신축 (가상)',
-  code: 'AWS D1.1/D1.1M:2020',
-  route: 'Clause 6 — 시험인정 (Qualified by Testing)',
-  pqr: 'ED-PQR-001',
-  processes: 'FCAW-G (플럭스코어드 가스차폐) · 반자동',
-  joint: 'B-U2a-S · CJP single-V 45° · R 6 mm · Root Face 2 mm · 철제 백킹 6 × 25 mm',
-  base: 'ASTM A992 Gr.50 (Group II) to A992 Gr.50 (Group II)',
-  baseT: '3 ~ 32 mm',
-  filler: 'E71T-1 (A5.20) · F6 / A1 · Ø1.2 mm',
-  position: '1G (아래보기) — 상진/하진 해당 없음',
-  pwht: '없음 (계약 요구 없음)',
-  preheat: '최소 10 °C · 최대 층간 230 °C',
-  gas: 'CO2 100 % · 15 ~ 25 L/min',
-  elec: 'DCEP · 180~260 A / 22~28 V · CTWD 15~20 mm · 25~35 cm/min',
-  tech: '다층 다패스 · 스트링거/위빙(≤ 15 mm) · 패스간 슬래그 제거 · 백가우징 없음 · 피닝 금지',
-  hdr: '가온스틸(가상) — 제작: 용접기술자(서명) / 검토: 품질검토자(서명) / 승인: 품질책임자(서명)',
-  remark: '1. 본 WPS는 교육용 가상 문서이며 실제 제작에 사용할 수 없습니다.\n2. 충격시험(CVN)이 요구되는 부재에는 이 WPS를 적용하지 않습니다.\n3. 3G·4G 자세는 이 WPS 인정 범위 밖입니다(별도 인정 필요).'
-};
-
-const POINTS = [
-  {
-    n: 1, name: '적용 규격 · 문서 정보', short: '적용규격',
-    value: 'AWS D1.1/D1.1M:2020 · Clause 6 시험인정 · 지원 PQR ED-PQR-001',
-    clause: 'D1.1 5.1, 5.2 / 6.1', clauseKey: 'g5-6',
-    badge: 'base', badgeText: '공통',
-    meaning: 'WPS를 읽을 때 가장 먼저 보는 것은 “어느 코드의, 어느 인정 경로로 만든 문서인가”입니다. 사전인정(Clause 5)이면 PQR이 없고, 시험인정(Clause 6)이면 반드시 지원 PQR이 있습니다.',
-    logic: '이 WPS는 모재·이음·공정이 Clause 5 사전인정 조건을 그대로 만족하지 않아 Clause 6 시험인정으로 작성됐습니다. 그래서 문서 어디에나 PQR 번호가 따라붙고, 인정 범위도 PQR이 정합니다.',
-    field: 'Sec.I·B31.1 같은 제작 코드가 따로 있는 압력용기·배관과 달리, 철골은 AWS D1.1 하나가 설계·제작·검사를 함께 규정합니다. 발주처 시방이 D1.1보다 엄격하면 그쪽이 우선입니다.',
-    quiz: { q: '이 WPS에 PQR 번호가 있다는 것은 무엇을 뜻하나?', a: ['Clause 5 사전인정만으로 작성됐다', 'Clause 6 시험인정으로 작성됐다'], correct: 1, why: '사전인정 WPS는 PQR을 요구하지 않습니다. PQR이 적혀 있으면 시험인정 경로입니다.' }
-  },
-  {
-    n: 2, name: '용접 방법(공정)', short: '용접법',
-    value: 'FCAW-G · 반자동 · E71T-1 Ø1.2 mm',
-    clause: 'D1.1 5.5 (Table 5.1~5.4), Table 6.6', clauseKey: 'g66',
-    badge: 'E', badgeText: 'E · 필수변수',
-    meaning: '공정은 WPS의 뼈대입니다. 같은 “FCAW”라도 가스 차폐(G)와 자기 차폐(SS)는 다른 절차로 봐야 합니다.',
-    logic: '공정을 바꾸거나 추가하면 새 PQR이 필요합니다(Table 6.6). E71T-8(자기 차폐)로 바꾸는 것은 가스 유무가 달라지는 변경이라 역시 재인정입니다. 반자동↔자동 같은 작업 형태 변경은 코드상 별도 취급입니다.',
-    field: 'FCAW는 바람에 약합니다. 야외에서는 방풍막이 없으면 가스 차폐가 깨져 기공이 생깁니다. 자기 차폐 와이어는 그 대신 충격인성이 불리할 수 있습니다.',
-    quiz: { q: 'E71T-1(가스 차폐)을 E71T-8(자기 차폐)로 바꾸면?', a: ['WPS 개정만으로 가능', '새 PQR 필요'], correct: 1, why: '차폐 방식이 바뀌면 가스 관련 필수변수가 달라져 재인정 대상입니다.' }
-  },
-  {
-    n: 3, name: '이음 형상', short: '이음',
-    value: 'B-U2a-S · single-V 45° · Root 6 mm · Face 2 mm · 철제 백킹',
-    clause: 'D1.1 5.4, Figure 5.1, Table 6.6', clauseKey: 'gjoint',
-    badge: 'E', badgeText: 'E · 필수변수',
-    meaning: '도면과 WPS의 이음 표기가 같은 상세를 가리키는지 확인해야 합니다. “single-V”라는 말만으로는 부족하고 B-U2a-S 같은 상세 기호가 있어야 합니다.',
-    logic: '그루브 형상 변경(예: single-V→double-V)과 백킹을 빼는 변경은 재인정 사유입니다. 반대로 백킹을 더하는 변경은 재인정 사유가 아닙니다. -S는 철제 백킹을 용접 후 제거하지 않는다는 뜻이고, -GF는 백가우징 후 이면을 용접한다는 뜻입니다.',
-    field: '루트 개구부가 커지면 용입은 쉬워지지만 입열이 늘고 변형이 커집니다. 백킹을 댄 채로 루트를 지나치게 태우면 백킹과 모재 사이에 슬래그가 끼어 UT 지시로 나타납니다.',
-    quiz: { q: '백킹을 “빼는” 변경은?', a: ['WPS 개정만', '새 PQR 필요'], correct: 1, why: '백킹 삭제는 재인정, 추가는 재인정 사유가 아닙니다(비대칭 규칙).' }
-  },
-  {
-    n: 4, name: '모재 (Group · 두께)', short: '모재',
-    value: 'A992 Gr.50 (Group II) · 인정 두께 3 ~ 32 mm',
-    clause: 'D1.1 5.3, Table 5.3, Table 6.2, Table 6.6', clauseKey: 'g62',
-    badge: 'E', badgeText: 'E · 필수변수',
-    meaning: '모재는 “규격+등급”이 아니라 “Group+두께”로 읽습니다. Group이 같으면 강종이 달라도 같은 절차로 용접할 수 있습니다.',
-    logic: '지원 PQR은 16 mm 시험편으로 인정받았습니다. Table 6.2에 따라 인정 두께는 최소 3 mm, 최대 2T = 32 mm입니다. A992는 Group II이므로 Group I(A36 3/4" 이하)이나 Group III(A572 Gr.60)로 바꾸면 재인정입니다.',
-    field: '도면 두께가 32 mm를 넘으면 이 WPS로는 안 됩니다. 두꺼운 부재는 25 mm 이상 시험편으로 인정받아 두께 제한을 없애 두는 것이 실무 요령입니다.',
-    quiz: { q: '이 WPS로 40 mm 부재를 용접할 수 있나?', a: ['가능', '불가'], correct: 1, why: '인정 최대 두께가 2T=32 mm입니다. 40 mm는 범위 밖입니다.' }
-  },
-  {
-    n: 5, name: '용가재', short: '용접봉',
-    value: 'E71T-1 (A5.20) · F6 / A1 · Ø1.2 mm',
-    clause: 'D1.1 5.6, Table 6.6', clauseKey: 'gfno',
-    badge: 'E', badgeText: 'E · 필수변수(F/A-No.)',
-    meaning: '분류 기호를 F-No.(난이도)와 A-No.(성분)로 바꿔 읽는 것이 핵심입니다. E71T-1은 인장 70 ksi급, F6, A1입니다.',
-    logic: 'F-No.나 A-No.가 바뀌면 재인정입니다. 같은 F6/A1 안에서의 변경(예: ER70S-6↔E71T-1은 공정이 달라 별개)은 공정이 같다면 WPS 개정으로 끝나는 경우가 많습니다. 와이어 직경은 필수변수가 아니지만 WPS에 적어야 합니다.',
-    field: 'E71T-1은 흡습합니다. 개봉 후 습한 현장에 방치하면 수소 유입으로 지연균열이 생깁니다. 보관 온도와 개봉 후 사용 시간을 기록해야 합니다.',
-    quiz: { q: 'E7018(F4)을 E7016(F4)으로 바꾸면?', a: ['같은 F-No.이므로 WPS 개정', '새 PQR 필요'], correct: 0, why: 'F-No.와 강도 수준이 같으면 WPS 개정으로 처리합니다.' }
-  },
-  {
-    n: 6, name: '자세 · 진행방향', short: '자세',
-    value: '1G (아래보기)',
-    clause: 'D1.1 Table 6.1, Table 6.6', clauseKey: 'g61',
-    badge: 'E', badgeText: 'E · 필수변수',
-    meaning: 'WPS에 적힌 자세는 “시험으로 인정받은 자세”입니다. 도면이 요구하는 자세가 여기에 없으면 그 WPS로는 용접할 수 없습니다.',
-    logic: '이 PQR은 1G로 시험했으므로 Table 6.1에 따라 아래보기(F)만 인정합니다. 3G(수직)를 추가하려면 3G 시험을 더 하거나 2G+3G+4G로 다시 인정받아야 합니다.',
-    field: '자세는 절차(WPS)와 사람(WPQ) 양쪽에 걸립니다. WPS가 전 자세를 허용해도, 1G로 시험한 용접사는 수직을 못 합니다.',
-    quiz: { q: '1G로 시험한 PQR로 3G 생산 용접이 가능한가?', a: ['가능', '불가'], correct: 1, why: '1G는 F(아래보기)만 인정합니다. 3G는 별도 시험이 필요합니다.' }
-  },
-  {
-    n: 7, name: '용접후열처리(PWHT)', short: 'PWHT',
-    value: '없음 — 계약 요구 없음',
-    clause: 'D1.1 5.9, 6.8', clauseKey: 'g59',
-    badge: 'E', badgeText: 'E · 필수변수',
-    meaning: 'D1.1은 압력용기 코드처럼 두께로 PWHT를 강제하지 않습니다. 요구가 있으면 계약·설계가 정하고, 절차는 그 조건으로 인정받아야 합니다.',
-    logic: 'PWHT 유무와 조건(온도·유지시간·승온속도)은 필수변수입니다. “없음”으로 인정받은 절차에 PWHT를 넣거나 그 반대면 재인정입니다.',
-    field: '철골에서 PWHT는 드물지만, 두꺼운 인장부재나 특정 용접부에는 발주처가 요구할 수 있습니다. 요구가 있는데 WPS에 없으면 그 자체가 부적합입니다.',
-    quiz: { q: 'D1.1은 두께 기준 PWHT를 강제하나?', a: ['강제한다', '원칙적으로 요구하지 않는다'], correct: 1, why: 'D1.1은 PWHT를 원칙적으로 요구하지 않고, 계약·설계 요구 시 절차에 반영합니다.' }
-  },
-  {
-    n: 8, name: '예열 · 층간온도', short: '예열',
-    value: '최소 10 °C · 최대 층간 230 °C',
-    clause: 'D1.1 5.7, Table 5.8', clauseKey: 'g58',
-    badge: 'E', badgeText: 'E · 필수변수',
-    meaning: '예열은 Table 5.8의 범주와 두께로 정해지는 “하한”입니다. 이 WPS의 모재는 A992(범주 B)이고 최후 부재 20~38 mm 구간에 해당해 최소 10 °C입니다.',
-    logic: 'Table 5.8 값보다 낮추는 변경은 재인정입니다. 층간온도의 상한은 코드가 특정 강재에만 규정하므로, 230 °C 같은 상한은 설계·시방이 정하고 WPS에 기재합니다. 충격시험이 요구되면 상한을 올리는 변경도 재인정 사유가 됩니다.',
-    field: '예열 측정은 용접부에서 가장 두꺼운 부재 두께만큼, 최소 75 mm 떨어진 여러 방향에서 합니다. 겨울철 야외에서는 0 °C 기준을 적용할 수 없어 20 °C까지 올려 유지해야 합니다.',
-    quiz: { q: 'A992 25 mm 부재, FCAW(E71T-1)의 Table 5.8 최소 예열은?', a: ['10 °C', '65 °C'], correct: 0, why: '범주 B, 20~38 mm 구간은 50°F(10°C)입니다.' }
-  },
-  {
-    n: 9, name: '가스 · 유량', short: '가스',
-    value: 'CO2 100 % · 15 ~ 25 L/min',
-    clause: 'D1.1 5.6, Table 5.7', clauseKey: 'g66',
-    badge: 'E', badgeText: 'E(조성) / N(유량)',
-    meaning: '가스는 “무엇을(조성)”과 “얼마나(유량)”를 나눠 봅니다. 조성 변경은 필수변수, 유량은 기재 사항입니다.',
-    logic: 'CO2 100 %에서 Ar 혼합(예: 75/25)으로 바꾸면 이행 모드와 입열 특성이 달라져 재인정 대상입니다. 유량은 WPS에 적힌 범위를 벗어나면 현장 부적합이지만 코드상 필수변수는 아닙니다.',
-    field: '유량계는 토치에서 15~20 mm 떨어진 콘택트 팁에서 확인하고, 바람이 있는 곳에서는 방풍 조치를 먼저 합니다.',
-    quiz: { q: 'CO2 100 %를 Ar/CO2 혼합가스로 바꾸면?', a: ['WPS 개정만', '새 PQR 필요'], correct: 1, why: '차폐가스 조성 변경은 필수변수입니다.' }
-  },
-  {
-    n: 10, name: '전기적 특성', short: '전기',
-    value: '180~260 A / 22~28 V · CTWD 15~20 mm · 25~35 cm/min · 입열 ≤ 2.0 kJ/mm',
-    clause: 'D1.1 6.8, Table 6.7', clauseKey: 'ghi',
-    badge: 'S', badgeText: 'S · CVN 시 필수',
-    meaning: '전류·전압·속도는 WPS에 “범위”로 적고, 그 조합이 만드는 입열량이 성질을 좌우합니다.',
-    logic: '입열량은 H = 전압×전류×60 ÷ 이동속도입니다. 26 V·240 A·30 cm/min이면 1.25 kJ/mm로, WPS 상한 2.0 kJ/mm 안에 듭니다. 충격시험 요구 공사에서는 인정 입열량을 넘는 변경이 재인정 사유가 됩니다.',
-    field: '전류만 올리고 속도를 그대로 두면 입열이 커집니다. 반대로 속도를 올리면 융합 부족이 생길 수 있어, 범위를 벗어난 “속도 올리기”는 현장에서 가장 흔한 이탈입니다.',
-    quiz: { q: '26 V, 240 A, 300 mm/min의 입열량은?', a: ['약 1.25 kJ/mm', '약 2.5 kJ/mm'], correct: 0, why: '26×240×60 ÷ 300 = 1,248 J/mm ≈ 1.25 kJ/mm입니다.' }
-  },
-  {
-    n: 11, name: '전류 극성', short: '극성',
-    value: 'DCEP (직류 역극성)',
-    clause: 'D1.1 Table 6.6, 6.8', clauseKey: 'g66',
-    badge: 'E', badgeText: 'E · 필수변수',
-    meaning: 'FCAW·SMAW는 DCEP가 표준입니다. 극성이 바뀌면 용입 형상과 입열이 달라집니다.',
-    logic: 'DCEP→DCEN 또는 AC↔DC 변경은 필수변수입니다. 특히 FCAW를 DCEN으로 돌리면 아크가 불안정하고 융합이 떨어져 실제로는 결함으로 이어집니다.',
-    field: '용접기 단자 표기와 케이블 결선을 작업 전에 눈으로 확인합니다. 케이블을 바꿔 끼운 채 하루를 돌리는 것이 현장 단골 사고입니다.',
-    quiz: { q: 'DCEP를 DCEN으로 바꾸면?', a: ['WPS 개정만', '새 PQR 필요'], correct: 1, why: '전류 종류·극성 변경은 필수변수입니다.' }
-  },
-  {
-    n: 12, name: '기술사항(기법)', short: '기법',
-    value: '다층 다패스 · 스트링거/위빙 · 패스간 청소 · 백가우징 없음 · 피닝 금지',
-    clause: 'D1.1 6.8, Table 6.7', clauseKey: 'gcvn',
-    badge: 'N', badgeText: 'N · 비필수(대부분)',
-    meaning: '기법 항목은 WPS에 반드시 적지만, 대부분은 코드상 비필수변수입니다. 다만 충격시험이 요구되면 단층↔다층 같은 항목이 재인정 사유가 됩니다.',
-    logic: '이 WPS는 -S 상세이므로 백가우징이 없습니다. 피닝은 원칙적으로 금지(코드가 허용하는 경우 제외)이고, 패스간 슬래그 제거는 기재 사항입니다.',
-    field: '위빙 폭이 커지면 입열 분포가 달라집니다. 폭을 넓게 잡는 습관은 인성 관리가 필요한 부재에서 특히 조심해야 합니다.',
-    quiz: { q: '충격시험이 요구될 때 재인정 사유가 되는 기법 변경은?', a: ['다층→단층', '스트링거→위빙'], correct: 0, why: '단층↔다층 변경은 CVN 요구 시 보충 필수변수입니다.' }
-  }
-];
-
-const QUESTS = [
-  {
-    id: 'Q1',
-    q: '도면에 40 mm 두께 A992 부재가 나왔다. 이 WPS로 용접할 수 있나?',
-    need: [4],
-    answer: 1,
-    options: ['가능 — Group이 같으므로', '불가 — 인정 두께를 넘는다'],
-    why: '지원 PQR은 16 mm 시험편입니다. Table 6.2에 따라 인정 최대 두께는 2T = 32 mm이므로 40 mm는 범위 밖입니다.'
-  },
-  {
-    id: 'Q2',
-    q: '현장에 E71T-1이 없어 자기 차폐 와이어 E71T-8로 바꾸려 한다. 재인정이 필요한가?',
-    need: [2, 9],
-    answer: 0,
-    options: ['재인정 필요 — 차폐 방식이 바뀐다', '불필요 — F6/A1은 같다'],
-    why: 'F-No.가 같아도 차폐가스 유무가 달라지면 공정 조건이 바뀝니다. 필수변수 변경으로 새 PQR이 필요합니다.'
-  },
-  {
-    id: 'Q3',
-    q: '같은 이음이 3G(수직) 자세로 바뀌었다. 이 WPS로 가능한가?',
-    need: [6],
-    answer: 1,
-    options: ['가능 — WPS는 자세에 묶이지 않는다', '불가 — 1G 시험은 아래보기만 인정한다'],
-    why: 'Table 6.1에서 1G 시험은 F만 인정합니다. 3G는 별도 시험이 필요합니다.'
-  }
-];
-
-/* ---------------------------------------------------------------- 4. 시뮬레이터 시나리오 */
-const PQR = {
-  no: 'ED-PQR-001', date: '2026-01-05',
-  process: 'FCAW-G', filler: 'E71T-1', f: 6, a: 1, dia: '1.2 mm',
-  base: 'ASTM A992 Gr.50', group: 'II', T: 16,
-  joint: 'B-U2a-S', position: '1G',
-  preheat: 10, interpass: 200,
-  pwht: '없음', cvn: '없음 (충격시험 미적용)',
-  gas: 'CO2 100 %', polarity: 'DCEP',
-  tests: '인장 2 · 굽힘 2 — 합격 (교육용 예시)',
-  qualified: '두께 3 ~ 32 mm · 자세 F(아래보기) · Group II · F6/A1'
-};
-
-const SCENARIOS = [
-  {
-    id: 'SC1', q: '충전·캡을 FCAW에서 GMAW(ER70S-6, 분무이행)로 바꾼다.', clause: 'Table 6.6',
-    cls: ['E', 'S', 'N'], clsAns: 0, actAns: 0,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '공정 변경은 대표적인 필수변수입니다. 용가재가 F6/A1으로 같아도 공정이 다르면 새 PQR이 필요합니다.'
-  },
-  {
-    id: 'SC2', q: '모재를 A992(Group II)에서 A572 Gr.60(Group III)으로 바꾼다.', clause: 'Table 6.6 / Table 5.3',
-    cls: ['E', 'S', 'N'], clsAns: 0, actAns: 0,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '모재 Group 변경은 필수변수입니다. 같은 ASTM 계열이라도 Group이 다르면 재인정입니다.'
-  },
-  {
-    id: 'SC3', q: '생산 부재 두께가 45 mm다 (PQR 시험편 16 mm).', clause: 'Table 6.2',
-    cls: ['E', 'S', 'N'], clsAns: 0, actAns: 0,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '16 mm 시험편의 인정 최대 두께는 2T = 32 mm입니다. 45 mm는 범위 밖이므로 25 mm 이상으로 다시 인정받아야 합니다.'
-  },
-  {
-    id: 'SC4', q: 'E71T-1을 E71T-8(자기 차폐)로 바꾼다.', clause: 'Table 6.6',
-    cls: ['E', 'S', 'N'], clsAns: 0, actAns: 0,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: 'F6/A1은 같지만 차폐가스 유무가 달라져 공정 조건이 바뀝니다. 재인정 대상입니다.'
-  },
-  {
-    id: 'SC5', q: '예열을 10 °C에서 5 °C로 낮춘다 (A992 25 mm).', clause: '5.7, Table 5.8',
-    cls: ['E', 'S', 'N'], clsAns: 0, actAns: 0,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: 'Table 5.8의 최소 예열(10 °C)보다 낮추는 것은 코드 위반이자 필수변수 변경입니다. 인정이 필요합니다.'
-  },
-  {
-    id: 'SC6', q: '층간온도 상한을 200 °C에서 230 °C로 올린다 (CVN 없음).', clause: 'Table 6.7',
-    cls: ['E', 'S', 'N'], clsAns: 1, actAns: 1,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '충격시험이 요구되지 않으면 층간온도 상한 상향은 WPS 개정으로 처리할 수 있습니다. CVN 요구 공사였다면 재인정입니다.'
-  },
-  {
-    id: 'SC7', q: '이음을 single-V에서 double-V로 바꾼다.', clause: 'Table 6.6',
-    cls: ['E', 'S', 'N'], clsAns: 0, actAns: 0,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '그루브 형상 변경은 필수변수입니다. 단, 인정받은 CJP가 조건을 만족하는 다른 CJP 상세를 포괄하는 경우는 별도 검토입니다.'
-  },
-  {
-    id: 'SC8', q: '철제 백킹을 빼고 백가우징으로 바꾼다.', clause: 'Table 6.6',
-    cls: ['E', 'S', 'N'], clsAns: 0, actAns: 0,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '백킹 “삭제”는 필수변수 변경입니다. 반대로 백킹을 더하는 변경은 재인정 사유가 아닙니다.'
-  },
-  {
-    id: 'SC9', q: 'DCEP를 DCEN으로 바꾼다.', clause: 'Table 6.6',
-    cls: ['E', 'S', 'N'], clsAns: 0, actAns: 0,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '전류 종류·극성 변경은 필수변수입니다. FCAW에서 DCEN은 융합에도 불리합니다.'
-  },
-  {
-    id: 'SC10', q: '차폐가스를 CO2 100 %에서 Ar 75 %/CO2 25 %로 바꾼다.', clause: '5.6, Table 6.6',
-    cls: ['E', 'S', 'N'], clsAns: 0, actAns: 0,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '차폐가스 조성 변경은 필수변수입니다. 이행 모드·입열 특성이 달라집니다.'
-  },
-  {
-    id: 'SC11', q: '와이어 직경을 Ø1.2에서 Ø1.4로 바꾼다.', clause: 'Table 6.6',
-    cls: ['E', 'S', 'N'], clsAns: 2, actAns: 1,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '직경은 필수변수가 아니므로 새 PQR은 필요 없습니다. WPS에 기재값을 고쳐 개정합니다.'
-  },
-  {
-    id: 'SC12', q: '유량을 20 L/min에서 28 L/min으로 올린다.', clause: '5.6, Table 5.7',
-    cls: ['E', 'S', 'N'], clsAns: 2, actAns: 1,
-    acts: ['새 PQR 필요(재인정)', 'WPS 개정만', '변경 불필요'],
-    why: '유량은 비필수 기재 항목입니다. 다만 WPS 범위를 벗어난 운전은 현장 부적합입니다.'
-  }
-];
-
-/* ---------------------------------------------------------------- 5. 과제서 · 작성 답안 */
-const TASK = {
-  id: 'T01',
-  project: '가온 물류센터 신축공사 (가상)',
-  part: '기둥 스플라이스 플랜지 CJP 이음 — 제작장 아래보기(1G) 용접',
-  base: 'ASTM A992 Gr.50 (Group II), 판두께 25 mm',
-  joint: 'B-U2a-S 상세 · single-V 45° · 철제 백킹 · 완전용입(CJP)',
-  process: 'FCAW-G, E71T-1 Ø1.2, CO2 100 %, DCEP',
-  req: [
-    '최소 예열은 Table 5.8 이상으로 기재',
-    '최대 층간온도 230 °C 이하',
-    'PWHT 없음 (계약 요구 없음)',
-    '충격시험(CVN) 미적용',
-    '최대 입열량 2.0 kJ/mm 이하',
-    '지원 PQR은 ED-PQR-001만 사용 가능'
+/* ── 장면 2: 브리핑 ─────────────────────────────────────── */
+const BRIEF = {
+  code: 'ST-401',
+  detail: 'B-12',
+  material: 'SM275',
+  materialNote: 'KS D 3515 · Fy 275 MPa',
+  thickness: '12 mm',
+  thicknessNote: '웨브·브래킷 동일',
+  joint: '보 웨브 – 브래킷',
+  jointNote: 'T-joint · 수직 필렛 3F',
+  leg: '6 mm 연속 · 양면',
+  process: 'FCAW-G · CO₂ 반자동',
+  date: '익일 07:00 착수',
+  env: '오늘 현장 8 °C · 습도 62 %',
+  // 자료함 — 직접 열어야 보이는 단서
+  drawer: [
+    { icon:'🌡', title:'내일 날씨 예보', short:'07시 −3 °C · 서풍 3~4 m/s',
+      body:'내일 07시 기온 <b>−3 °C</b>, 서풍 3~4 m/s, 습도 68 %. 오전에는 서리가 예상됩니다. (강수 없음)' },
+    { icon:'📁', title:'사내 PQR 목록', short:'PQR-ST-012 · SM275 확인',
+      body:'<b>PQR-ST-012</b> — SM275, 시험판 25 mm, FCAW-G, E71T-1C(100 % CO₂), DCEP, <b>3G 상진</b> CJP 맞대기, 시험 합격 (2년 전).<br>이 밖에 PQR-A36-04(A36), PQR-SS400-07(SS400)이 있습니다.' },
+    { icon:'🧰', title:'현장 장비·자재 재고', short:'E71T-1C Ø1.2 / E70T-1C Ø1.6',
+      body:'CO₂ 반자동 용접기(DC). 와이어 재고: <b>E71T-1C Ø1.2 mm</b>, E70T-1C Ø1.6 mm.<br><span style="color:#ffbd83">E70T-1C는 아래보기·수평 전용 분류</span>입니다. 수직에 쓰면 비드가 흘러내립니다.' }
   ]
 };
 
-const ANSWER = {
-  pqr: 'ED-PQR-001',
-  route: 'clause6',
-  process: 'FCAW-G',
-  method: 'semi',
-  joint: 'B-U2a-S',
-  groove: 45,
-  root: 6,
-  backing: 'steel',
-  bspec: 'A992',
-  bgrade: 'Gr.50',
-  group: 'II',
-  tMin: 3,
-  tMax: 32,
-  fclass: 'E71T-1',
-  fno: 6,
-  ano: 1,
-  dia: 1.2,
-  pos: ['1G'],
-  pwht: 'none',
-  preheat: 10,
-  interpass: 230,
-  gas: 'CO2',
-  flow: 20,
-  polarity: 'DCEP',
-  ampMin: 180,
-  ampMax: 260,
-  voltMin: 22,
-  voltMax: 28,
-  ctWd: 18,
-  hi: 1.25,
-  passes: 'multi',
-  backgouge: 'none',
-  peening: false
+/* ── 장면 3: 공백 WPS 칸 ────────────────────────────────
+   kind: given(현장 정보 키인) | ask(규격을 보고 판단)
+   ------------------------------------------------------------------ */
+const FIELDS = [
+
+  /* 01 이음 */
+  { id:'joint', sec:1, label:'이음 형식', en:'Joint Type', kind:'given', ui:'chips',
+    options:['T-joint · 양면 필렛','Butt · V-groove (CJP)','Corner · 편면 필렛'],
+    pop:{ title:'도면 ST-401 / B-12', ref:'도면 지시',
+      body:'보 웨브에 브래킷을 직각으로 세워 붙입니다. 개선 없이 양면 필렛 6 mm 연속.', fill:'T-joint · 양면 필렛' },
+    answer:'T-joint · 양면 필렛', weight:3,
+    fb:'단면도를 다시 보세요. 웨브에 브래킷을 세운 T자 접합이므로 맞대기(Butt)가 아닙니다.' },
+
+  { id:'backing', sec:1, label:'받침판 · 뒷면 따내기', en:'Backing / Backgouging', kind:'ask', ui:'chips',
+    options:['Backing 없음 · Backgouging 없음','철제 백킹 · Backgouging 없음','Backing 없음 · Backgouging 실시'],
+    pop:{ title:'필렛에는 백킹도 백가우징도 없다', ref:'D1.1 5.4 · Figure 5.1~5.3',
+      body:'받침판과 뒷면 따내기는 완전용입(CJP)·부분용입 그루브의 변수입니다. 필렛은 루트가 열려 있지 않아 대상이 아닙니다.',
+      quote:'Backing과 backgouging은 그루브 용접의 이음 상세 변수로 다룬다. 필렛 이음에는 적용되지 않는다. (Clause 5 사전인정 이음 상세 — 확인 필요)' },
+    answer:'Backing 없음 · Backgouging 없음', weight:3,
+    fb:'필렛에는 받침판도 백가우징도 쓰지 않습니다. 그루브 용접 변수와 혼동했습니다.' },
+
+  { id:'rootGap', sec:1, label:'루트 간격', en:'Root Opening (Fit-up)', kind:'ask', ui:'number',
+    ph:'2', unit:'mm',
+    pop:{ title:'부재 사이 간격의 허용치', ref:'D1.1 7.21.1 (확인 필요)',
+      body:'브래킷과 웨브 사이 간격은 원칙적으로 2 mm 이하입니다. 넘으면 초과분만큼 각장을 늘려 보정하고, 5 mm를 넘으면 용접할 수 없습니다.',
+      quote:'Fillet 부재 간격은 최대 1/16 in(2 mm). 2 mm 초과~5 mm까지는 초과량만큼 각장을 증가시켜야 한다.' },
+    answer:{ min:0, max:2 }, weight:5,
+    fb:'간격은 0~2 mm로 관리합니다. 커지면 유효 목두께가 줄어 각장 보정이 필요합니다.' },
+
+  { id:'filletSize', sec:1, label:'필렛 각장', en:'Fillet Weld Size', kind:'given', ui:'number',
+    ph:'6', unit:'mm',
+    pop:{ title:'도면 지시 각장', ref:'도면 · 7.7 (확인 필요)',
+      body:'설계 각장은 6 mm입니다. 두꺼운 쪽 모재 6~13 mm에서 요구되는 최소 필렛 크기(5 mm)를 만족합니다.', fill:'6' },
+    answer:6, weight:4,
+    fb:'도면 지시는 6 mm입니다. 최소 크기(5 mm) 미만이거나 도면 값과 다르면 안 됩니다.' },
+
+  /* 02 모재 */
+  { id:'baseMetal', sec:2, label:'모재 규격', en:'Base Metal Spec', kind:'given', ui:'text',
+    ph:'예: KS D 3515 SM275',
+    pop:{ title:'자재 성적서 (입고분)', ref:'자재 성적서',
+      body:'KS D 3515 SM275, 판 두께 12 mm. 항복강도 275 MPa급 탄소강 구조용 강재입니다. SS275(KS D 3503)와 다른 강종입니다.', fill:'KS D 3515 SM275' },
+    accept:['ksd3515sm275','sm275','ksd3515','sm275ksd3515'], weight:3,
+    fb:'규격 번호와 강종을 함께 적습니다. SS275(KS D 3503)와 혼동하지 마세요.' },
+
+  { id:'group', sec:2, label:'모재 Group', en:'Table 5.3 Group', kind:'ask', ui:'chips', key:true,
+    options:['Group I','Group II','Table 5.3 미등재'],
+    pop:{ title:'승인 모재 목록에 있는가', ref:'D1.1 5.3 · Table 5.3',
+      body:'사전인정 WPS에 쓸 수 있는 모재는 Table 5.3에 나열된 규격뿐입니다. 목록은 주로 ASTM·API 강종이고, 강도에 따라 Group I~IV로 나뉩니다.',
+      quote:'Table 5.3 — Group I은 Fy 36 ksi급, Group II는 42~50 ksi급(A572 Gr.42/50, A992, A588 등). 표에 없는 강재는 사전인정 대상이 아니다.' },
+    answer:'Table 5.3 미등재', weight:10, crit:true,
+    fb:'SM275는 A36과 비슷해 보여도 Table 5.3에 없습니다. “비슷하다”는 규격 근거가 아닙니다.' },
+
+  { id:'thickRange', sec:2, label:'인정 두께 범위', en:'Thickness Range', kind:'ask', ui:'chips',
+    options:['3 mm ~ 제한 없음','3 ~ 24 mm (2T)','12 mm 단일'],
+    pop:{ title:'근거 PQR의 시험판 두께', ref:'D1.1 Table 6.2 (확인 필요)',
+      body:'인정 두께 범위는 근거가 되는 PQR의 시험판 두께로 정합니다. 25 mm 이상으로 시험하면 3 mm부터 상한 없이 인정됩니다.',
+      quote:'시험판 두께 25 mm 이상 → 3 mm ~ 무제한. 25 mm 미만 → 최대 2T.' },
+    answer:'3 mm ~ 제한 없음', weight:6,
+    fb:'PQR-ST-012의 시험판은 25 mm입니다. 그래서 3 mm부터 상한 없이 인정되고, 작업 두께 12 mm가 포함됩니다.' },
+
+  /* 03 용가재·전원 */
+  { id:'process', sec:3, label:'용접 공정', en:'Process', kind:'given', ui:'text',
+    ph:'예: FCAW-G',
+    pop:{ title:'현장 장비 구성', ref:'현장 장비',
+      body:'CO₂ 반자동 용접기(DC)에 플럭스 코어드 와이어를 걸어 씁니다. 가스 차폐 반자동(FCAW-G)입니다.', fill:'FCAW-G' },
+    accept:['fcawg','fcaw-g','fcaw'], weight:3,
+    fb:'장비와 와이어를 보면 플럭스 코어드 + 가스 차폐(FCAW-G)입니다. GMAW(솔리드 와이어)와 구분하세요.' },
+
+  { id:'polarity', sec:3, label:'전류 종류 · 극성', en:'Current & Polarity', kind:'ask', ui:'chips', key:true,
+    options:['DC · DCEP (역극성)','DC · DCEN (정극성)','AC'],
+    pop:{ title:'T-1 계열 와이어의 표준 극성', ref:'AWS A5.20 / 제조사 데이터',
+      body:'가스 차폐 플럭스 코어드 와이어(T-1 계열)는 직류 역극성에서 쓰도록 분류됩니다. 극성이 바뀌면 아크와 용입이 달라져 필수변수입니다.',
+      quote:'T-1 계열 FCAW는 DCEP(와이어 +)로 분류된다. 최종 값은 제조사 데이터시트로 확인.' },
+    answer:'DC · DCEP (역극성)', weight:7, crit:true,
+    fb:'DCEN은 T-1 계열에 맞지 않습니다. 아크가 불안정해지고 기공·융합 불량이 생깁니다.' },
+
+  { id:'wireCurrent', sec:3, label:'와이어 지름 · 전류 · 전압', en:'Electrode Ø / A / V', kind:'ask', ui:'chips',
+    options:['Ø1.2 mm · 200 A · 25 V','Ø1.6 mm · 260 A · 28 V','Ø1.2 mm · 300 A · 32 V'],
+    pop:{ title:'로트에 있는 와이어와 수직 자세', ref:'D1.1 Table 5.1 (확인 필요)',
+      body:'수직 자세 Prequalified FCAW의 최대 와이어 지름은 5/64 in(2.0 mm)입니다. 재고에는 Ø1.2와 Ø1.6이 있고, 수직에서는 가는 와이어가 용융지 제어에 유리합니다.',
+      quote:'수직·위보기 자세 최대 와이어 지름 5/64 in(2.0 mm). 전류는 필러 제조사 권장 범위 이내.' },
+    answer:'Ø1.2 mm · 200 A · 25 V', weight:6,
+    fb:'Ø1.6은 수직에서 용융지가 무너지기 쉽고, 300 A는 Ø1.2의 권장 범위를 넘습니다. PQR 전류·전압 범위 안에서 고르세요.' },
+
+  { id:'filler', sec:3, label:'필러 분류', en:'Filler Classification', kind:'ask', ui:'chips', key:true,
+    options:['E71T-1C (A5.20)','E70T-1C (A5.20)','E71T-1M (A5.20)','ER70S-6 (A5.18)'],
+    pop:{ title:'강도와 자세, 가스까지 맞춘다', ref:'D1.1 Table 5.4 · A5.20',
+      body:'필러는 모재 강도에 맞추고, 분류 기호의 자세 숫자와 가스 문자를 확인합니다. 첫 숫자 0은 아래보기·수평 전용, 1은 전자세입니다.',
+      quote:'E7XT-x: 70 = 480 MPa급 인장. 두 번째 숫자 1 = 전자세. 끝의 C = 100% CO₂, M = Ar 혼합.' },
+    answer:'E71T-1C (A5.20)', weight:10, crit:true,
+    fb:'E70T-1C는 아래보기·수평 전용이라 수직 3F에서 비드가 흘러내립니다. 재고에 있다고 맞는 와이어는 아닙니다.' },
+
+  { id:'fano', sec:3, label:'F-No. / A-No.', en:'Referenced ASME No.', kind:'ask', ui:'chips',
+    options:['참고 F-6 / A-1','참고 F-4 / A-1','참고 F-6 / A-2','N/A (기재 안 함)'],
+    pop:{ title:'이 양식의 칸이 ASME에서 온 것입니다', ref:'ASME Sec. IX QW-432·442 / D1.1 Table 5.4',
+      body:'F-No./A-No.는 ASME Sec. IX의 분류입니다. 근거 규격이 D1.1이면 필러는 AWS 분류(Table 5.4)로 관리되므로, 이 칸은 참고 기재로 채웁니다.',
+      quote:'D1.1은 F-No./A-No.를 쓰지 않고 AWS 분류로 필러를 관리한다. ASME 기준 F-6(플럭스 코어드)·A-1(탄소강)은 참고값.' },
+    answer:'참고 F-6 / A-1', weight:3,
+    fb:'E71T-1C는 ASME 기준 F-6, 탄소강 용착금속은 A-1입니다. 근거는 AWS 분류(Table 5.4)이고 이 칸은 참고값입니다.' },
+
+  { id:'gas', sec:3, label:'차폐가스 · 유량', en:'Shielding Gas', kind:'ask', ui:'chips',
+    options:['100% CO₂ · 15–25 L/min + 방풍','Ar 75~80% + CO₂ · 15–25 L/min','100% Ar · 15–25 L/min'],
+    pop:{ title:'분류 문자와 바람 예보를 함께 본다', ref:'D1.1 Table 5.7 (확인 필요)',
+      body:'차폐가스는 필러 분류의 가스 문자와 같아야 합니다. 끝이 C면 100% CO₂, M이면 Ar 혼합입니다. 내일 서풍 3~4 m/s 예보도 확인하세요.',
+      quote:'FCAW-G 차폐가스는 필러 분류와 일치해야 한다. 풍속 약 8 km/h(2.2 m/s) 초과 시 방풍 조치가 필요하다.' },
+    answer:'100% CO₂ · 15–25 L/min + 방풍', weight:7, crit:true,
+    fb:'분류가 E71T-1<b>C</b>이므로 100% CO₂입니다. 바람 3~4 m/s에서는 방풍막 없이 가스 차폐가 깨집니다.' },
+
+  /* 04 자세·열 */
+  { id:'position', sec:4, label:'자세 · 진행 방향', en:'Position / Progression', kind:'ask', ui:'chips', key:true,
+    options:['3F · 수직 상진','3F · 수직 하진','1F · 아래보기'],
+    pop:{ title:'수직 필렛은 진행 방향까지 적는다', ref:'D1.1 Table 6.1 (확인 필요)',
+      body:'3G 그루브 PQR은 수직 그루브와 F·H·V 필렛 자세를 인정합니다. 수직 용접은 상진/하진을 WPS에 명시해야 합니다.',
+      quote:'3G 시험은 F·H·V 필렛을 인정. 수직은 진행 방향(상진/하진)을 절차에 명시.' },
+    answer:'3F · 수직 상진', weight:7, crit:true,
+    fb:'현장은 보 옆에서 올려 붙이는 3F이고, 근거 PQR도 상진입니다. 하진이나 미기재는 12 mm 판에서 융합 불량 위험이 큽니다.' },
+
+  { id:'preheat', sec:4, label:'예열 · 층간 온도', en:'Preheat / Interpass', kind:'ask', ui:'chips', key:true,
+    options:['최소 20 °C · 층간 20 °C 이상','최소 0 °C · 층간 0 °C 이상','예열 없음','최소 100 °C · 층간 100 °C 이상'],
+    pop:{ title:'강재 범주 · 두께 · 그리고 모재 온도', ref:'D1.1 Table 5.8',
+      body:'저수소 공정(FCAW) 20 mm 이하 강재의 최소 예열은 0 °C입니다. 다만 모재 온도가 0 °C 미만이면 최소 20 °C로 예열하고 층간에도 유지합니다.',
+      quote:'Table 5.8 — 저수소 공정, 20 mm 이하: 최소 예열 32 °F(0 °C). 모재가 빙점 아래면 70 °F(20 °C)까지 예열.' },
+    answer:'최소 20 °C · 층간 20 °C 이상', weight:10, crit:true,
+    fb:'내일 07시 −3 °C입니다. 모재가 빙점 아래이므로 “없음”도 “0 °C”도 아닌 20 °C 예열이 필요합니다.' },
+
+  { id:'heatInput', sec:4, label:'입열량', en:'Heat Input', kind:'ask', ui:'number',
+    ph:'1.2', unit:'kJ/mm',
+    pop:{ title:'전압·전류·속도로 계산', ref:'D1.1 입열량',
+      body:'H = (전압 × 전류 × 60) ÷ 이동속도. 단위를 mm·kJ로 맞춥니다. 충격시험이 요구되지 않는 이 작업에서는 기록·관리 항목입니다.',
+      quote:'H(kJ/mm) = 60 × E(V) × I(A) ÷ 1000 ÷ v(mm/min).',
+      detail:'조건: 25 V · 200 A · 250 mm/min → 계산해 보세요. (허용 1.00–1.40)' },
+    answer:{ min:1.00, max:1.40 }, weight:3,
+    fb:'25 V × 200 A × 60 ÷ 250 mm/min ≈ 1.20 kJ/mm 입니다. 공란으로 두지 말고 계산해 기재합니다.' },
+
+  { id:'pwht', sec:4, label:'용접후열처리', en:'PWHT', kind:'ask', ui:'chips',
+    options:['없음 (None)','620 °C · 1 h','565 °C · 2 h'],
+    pop:{ title:'도면·계약에 요구가 있는가', ref:'D1.1 5.9',
+      body:'D1.1은 원칙적으로 PWHT를 요구하지 않습니다. 계약·설계가 요구할 때만 조건을 정해 절차에 넣습니다. 이 도면에는 요구가 없습니다.',
+      quote:'PWHT 여부와 조건은 필수변수다. 요구가 없으면 “None”으로 두고, 추가하면 재인정 대상이 된다.' },
+    answer:'없음 (None)', weight:2,
+    fb:'도면에 PWHT 요구가 없습니다. 근거 없이 넣으면 일정과 비용만 늘고 변형 위험이 커집니다.' },
+
+  /* 05 판정 */
+  { id:'prequal', sec:5, label:'인정 방식 · 근거', en:'Prequalified or Qualified', kind:'ask', ui:'chips', key:true,
+    options:['Qualified (Clause 6) — PQR-ST-012','Prequalified (Clause 5)','Qualified — PQR-A36-04'],
+    pop:{ title:'Clause 5의 조건을 모두 만족하는가', ref:'D1.1 5.1 / 5.3 · 6.1',
+      body:'사전인정은 모재·이음·필러·변수가 모두 코드 범위 안에 있을 때만 성립합니다. 하나라도 벗어나면 Clause 6 시험으로 인정합니다.',
+      quote:'Prequalified WPS는 Table 5.3 모재와 사전인정 이음 상세를 모두 만족해야 한다. 그렇지 않으면 시험으로 인정한다.' },
+    answer:'Qualified (Clause 6) — PQR-ST-012', weight:8, crit:true,
+    fb:'SM275는 Table 5.3에 없어 사전인정이 성립하지 않습니다. 자료함의 PQR-ST-012(SM275, 3G 상진)를 근거로 지정해야 합니다.' }
+];
+
+const SECTIONS = {
+  1:{ n:'01', ko:'이음', en:'Joint' },
+  2:{ n:'02', ko:'모재', en:'Base Metal' },
+  3:{ n:'03', ko:'용가재 · 전원', en:'Filler & Power' },
+  4:{ n:'04', ko:'자세 · 열처리', en:'Position & Heat' },
+  5:{ n:'05', ko:'적용 판정', en:'Applicability' }
 };
 
-const CARDS = [
-  {
-    id: 'C1', title: 'WPS는 어디서 나오는가', tag: '흐름',
-    lead: '사전인정(Clause 5)이면 PQR 없이, 아니면 시험인정(Clause 6)으로.',
-    body: [
-      'D1.1에서 WPS를 만드는 길은 두 갈래입니다. 모재(Table 5.3)·이음상세(Figure 5.1~5.3)·공정(Table 5.1~5.4)·용가재·예열(Table 5.8)이 모두 코드가 미리 인정한 범위 안이면 <b>사전인정 WPS</b>로 바로 쓸 수 있습니다.',
-      '하나라도 벗어나면 시험편을 용접해 <b>PQR</b>을 만들고, 그 PQR이 지원하는 범위 안에서 WPS를 씁니다. 이때 PQR이 “어디까지 되는지”를 정합니다.',
-      '현장에서 WPS를 읽는다는 것은 결국 <b>이 값이 어디서 왔는지</b>(사전인정 조항인지, PQR의 인정 범위인지)를 되짚는 일입니다.'
-    ],
-    diagram: 'flow'
-  },
-  {
-    id: 'C2', title: '변경은 세 층으로 판단한다', tag: '필수변수',
-    lead: 'E(재인정) · S(CVN 요구 시 재인정) · N(WPS 개정).',
-    body: [
-      'D1.1에는 ASME식 E/S/N 표기가 없지만, 같은 원리로 세 층으로 나눠 읽으면 판단이 빨라집니다.',
-      '<b>E — 필수변수</b>: 강도·연성에 영향. 공정, 모재 Group, 용가재 F/A-No., 자세, 그루브 형상, 백킹 삭제, 극성, 예열 하향. → 새 PQR (Table 6.6)',
-      '<b>S — 충격시험 보충</b>: 인성에 영향. 입열량 상한, 층간온도 상한, 단층↔다층, 패스당 두께. CVN 요구 공사에서만 재인정 (Table 6.7)',
-      '<b>N — 비필수</b>: 직경, 유량, 전류·전압 범위, 청소 방법. WPS만 개정.'
-    ],
-    diagram: 'esn'
-  },
-  {
-    id: 'C3', title: '숫자는 두 표에서 나온다', tag: '인정범위',
-    lead: '두께는 Table 6.2, 예열은 Table 5.8.',
-    body: [
-      '<b>두께</b>: 시험편 T가 25 mm(1") 미만이면 인정 두께는 3 mm ~ 2T입니다. 16 mm로 시험하면 32 mm까지, 25 mm 이상으로 시험하면 두께 제한이 없어집니다.',
-      '<b>예열</b>: 강재 범주(A~D)와 최후 부재 두께로 최소 예열·층간온도가 정해집니다. A992·A572 Gr.50은 범주 B, 20~38 mm 구간이면 50°F(10°C)입니다.',
-      '이 두 표만 손에 익으면 WPS의 모재·예열 칸은 거의 읽은 것이나 다름없습니다.'
-    ],
-    diagram: 'tables'
-  },
-  {
-    id: 'C4', title: '12포인트 지도', tag: '독도',
-    lead: '슬라이드 순서 그대로 1~12번을 클릭해 읽습니다.',
-    body: [
-      '① 적용규격 ② 용접법 ③ 이음 ④ 모재 ⑤ 용가재 ⑥ 자세 ⑦ PWHT ⑧ 예열·층간 ⑨ 가스 ⑩ 전기 ⑪ 극성 ⑫ 기법.',
-      '각 칸에서 확인할 것은 세 가지입니다. <b>값</b>, <b>어느 조항에서 왔는지</b>, <b>현장에서 무엇을 조심할지</b>.',
-      '다음 단계에서 이 12개를 직접 눌러 보세요. 다 돌면 시뮬레이터가 열립니다.'
-    ],
-    diagram: 'map'
-  }
-];
+/* 합격 기준: 치명 오류 0건 그리고 80점 이상 */
+const PASS_RULE = { minScore: 80 };
+
+/* 치명 오류별 파단 연출 유형 (첫 번째 치명 오류로 결정) */
+const FRACTURE_TYPES = {
+  preheat:   { id:'hydrogen', label:'수소 지연 균열', where:'토우부', desc:'예열 없이 영하 모재에 용접 → 수소가 비드 아래에 머물다 하중이 걸린 뒤 토우에서 균열이 시작됐습니다.' },
+  filler:    { id:'throat',   label:'비드 처짐 · 목두께 부족', where:'목두께', desc:'E70T-1C(아래보기·수평 전용)를 수직에 써서 비드가 흘러내렸습니다. 유효 목두께가 모자라 전단 파단됐습니다.' },
+  position:  { id:'fusion',   label:'융합 불량', where:'루트부', desc:'하진 조건으로 12 mm 판에 용입이 들어가지 않았습니다. 루트 경계에서 비드가 껍질처럼 박리됐습니다.' },
+  polarity:  { id:'porosity', label:'기공 다발', where:'비드 내부', desc:'DCEN으로 아크가 불안정해져 가스가 빠져나가지 못했습니다. 비드 단면에 기공이 이어지며 파단됐습니다.' },
+  gas:       { id:'porosity', label:'기공 · 가스 차폐 불량', where:'비드 내부', desc:'바람 3~4 m/s에서 방풍 조치 없이 용접해 차폐가 깨졌습니다. 비드에 기공이 벌집처럼 생겼습니다.' },
+  group:     { id:'reject',   label:'근거 없는 절차서', where:'—', desc:'SM275를 등재 강재처럼 Group에 넣었습니다. 감리가 근거 문서를 요구하며 절차를 반려했습니다.' },
+  prequal:   { id:'reject',   label:'근거 없는 절차서', where:'—', desc:'Table 5.3 미등재 강재를 사전인정으로 처리했습니다. 감리 반려 후 용접이 중지됐습니다.' },
+  default:   { id:'hydrogen', label:'균열', where:'토우부', desc:'절차서의 필수변수가 현장 조건과 맞지 않아 용접부가 하중을 견디지 못했습니다.' }
+};
