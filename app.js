@@ -1,5 +1,5 @@
 /* =========================================================================
-   WPS작성 실습 — 화면 전환 · 전화 연출 · 공백 WPS · 채점 · 파단 연출
+   WPS작성 실습 — 화면 전환 · 음성 연출 · 공백 WPS · 채점 · 붕괴 연출
    의존: data.js
    ========================================================================= */
 (function(){
@@ -8,11 +8,11 @@
   const $  = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const wait = ms => new Promise(r => setTimeout(r, ms));
 
-  const state = { scene:'landing', answers:{}, timers:[] };
+  const state = { scene:'landing', answers:{}, seq:0, timers:[] };
   const SCENES = ['landing','call','brief','wps','result'];
   const sceneEl = id => document.getElementById('scene-' + id);
-  const CAN_HOVER = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
   const TRAY = [
     { fid:'filler',   label:'필러' },
     { fid:'preheat',  label:'예열' },
@@ -20,13 +20,151 @@
     { fid:'position', label:'자세' }
   ];
 
+  /* ======================================================================
+     음성 — 아나운서 내레이션 · 현장 통화 · 효과음
+     ====================================================================== */
+  const AU = {
+    muted: false,
+    live: new Set(),
+    /* 배경음악 */
+    bgm: null,
+    bgmOn: true,
+    bgmBase: 0.15,
+    bgmDuck: 0.04,
+    duckCount: 0,
+    bgmTimer: null,
+    init(){
+      try {
+        this.muted = localStorage.getItem('wps.muted') === '1';
+        this.bgmOn = localStorage.getItem('wps.bgm') !== '0';
+      } catch(e){ this.muted = false; this.bgmOn = true; }
+      this.syncButton();
+      this.syncBgm();
+    },
+    syncBgm(){
+      const b = $('#btnBgm');
+      if(!b) return;
+      b.setAttribute('aria-pressed', this.bgmOn ? 'true' : 'false');
+      b.classList.toggle('off', !this.bgmOn);
+      b.classList.toggle('playing', this.bgmOn && !this.muted);
+      b.title = this.bgmOn ? '배경음악 끄기' : '배경음악 켜기';
+    },
+    setBgm(on){
+      this.bgmOn = !!on;
+      try { localStorage.setItem('wps.bgm', this.bgmOn ? '1' : '0'); } catch(e){}
+      if(!this.bgmOn){ if(this.bgm){ try{ this.bgm.pause(); }catch(e){} } }
+      else this.startBgm();
+      this.syncBgm();
+    },
+    startBgm(){
+      if(!this.bgmOn || this.muted) return;
+      if(!this.bgm){
+        try {
+          this.bgm = new Audio('audio/bgm_terran.mp3');
+          this.bgm.loop = true;
+          this.bgm.preload = 'auto';
+          this.bgm.volume = 0;
+        } catch(e){ this.bgm = null; return; }
+      }
+      const p = this.bgm.play();
+      if(p && p.catch) p.catch(() => {});
+      this.setBgmVol(this.duckCount ? this.bgmDuck : this.bgmBase);
+    },
+    setBgmVol(target){
+      if(!this.bgm) return;
+      this.bgmTarget = target;
+      if(this.bgmTimer) return;
+      this.bgmTimer = setInterval(() => {
+        if(!this.bgm){ clearInterval(this.bgmTimer); this.bgmTimer = null; return; }
+        const d = (this.bgmTarget || 0) - this.bgm.volume;
+        if(Math.abs(d) < 0.004){ this.bgm.volume = this.bgmTarget || 0; clearInterval(this.bgmTimer); this.bgmTimer = null; }
+        else this.bgm.volume = Math.max(0, Math.min(1, this.bgm.volume + d * 0.25));
+      }, 45);
+    },
+    duck(){ this.duckCount++; this.setBgmVol(this.bgmDuck); },
+    unduck(){ this.duckCount = Math.max(0, this.duckCount - 1); if(!this.duckCount) this.setBgmVol(this.bgmBase); },
+    syncButton(){
+      const b = $('#btnMute');
+      if(!b) return;
+      b.setAttribute('aria-pressed', this.muted ? 'true' : 'false');
+      b.classList.toggle('off', this.muted);
+      b.innerHTML = this.muted
+        ? '<span class="ico" aria-hidden="true">🔇</span><span class="lbl">소리 꺼짐</span>'
+        : '<span class="ico" aria-hidden="true">🔊</span><span class="lbl">소리 켜짐</span>';
+      b.title = this.muted ? '소리 켜기' : '소리 끄기';
+    },
+    setMuted(v){
+      this.muted = !!v;
+      try { localStorage.setItem('wps.muted', this.muted ? '1' : '0'); } catch(e){}
+      if(this.muted){
+        this.stopAll();
+        if(this.bgm){ try{ this.bgm.pause(); }catch(e){} }
+      } else if(this.bgmOn){
+        this.startBgm();
+      }
+      this.syncButton(); this.syncBgm();
+    },
+    stopAll(){
+      this.live.forEach(a => { try { a.pause(); } catch(e){} });
+      this.live.clear();
+      if(this.current){ try{ this.current.pause(); }catch(e){} this.current = null; }
+      if(this.currentDone){ const d=this.currentDone; this.currentDone=null; d(false); }
+      this.duckCount = 0;
+      this.setBgmVol(this.bgmBase);
+    },
+    /* 순차 재생 — 끝나면 resolve. 음소거/실패면 즉시 false */
+    clip(src){
+      return new Promise(resolve => {
+        if(!src || this.muted) return resolve(false);
+        this.duck();
+        let a;
+        try { a = new Audio('audio/' + src + '.mp3'); } catch(e){ return resolve(false); }
+        let done = false;
+        const fin = ok => {
+          if(done) return; done = true;
+          this.live.delete(a);
+          if(this.current === a){ this.current = null; this.currentDone = null; }
+          this.unduck();
+          resolve(ok);
+        };
+        a.preload = 'auto';
+        a.addEventListener('ended', () => fin(true));
+        a.addEventListener('error', () => fin(false));
+        this.live.add(a);
+        this.current = a;
+        this.currentDone = fin;
+        const p = a.play();
+        if(p && p.catch) p.catch(() => setTimeout(() => fin(false), 260));
+        setTimeout(() => { if(!done && a.duration && isFinite(a.duration)) {} }, 0);
+      });
+    },
+    /* 동시 재생 (효과음) */
+    fx(src, vol){
+      if(!src || this.muted) return;
+      try {
+        const a = new Audio('audio/' + src + '.mp3');
+        a.volume = vol == null ? 1 : vol;
+        this.live.add(a);
+        a.addEventListener('ended', () => this.live.delete(a));
+        a.addEventListener('error', () => this.live.delete(a));
+        const p = a.play(); if(p && p.catch) p.catch(() => {});
+      } catch(e){}
+    }
+  };
+
   function later(fn, ms){ const t = setTimeout(fn, ms); state.timers.push(t); return t; }
   function clearTimers(){ state.timers.forEach(clearTimeout); state.timers = []; }
+  const alive = seq => seq === state.seq;
 
-  /* ── 화면 전환 ───────────────────────────────────────────── */
+  /* ======================================================================
+     화면 전환
+     ====================================================================== */
   function show(id, opts={}){
     clearTimers();
     closePop();
+    state.seq++;
+    AU.stopAll();
+    hideNarr();
     state.scene = id;
     SCENES.forEach(s => { const el = sceneEl(s); if(el) el.classList.toggle('show', s === id); });
     $('#siteTop').classList.toggle('on', id !== 'landing');
@@ -47,12 +185,37 @@
     });
   }
 
+  /* ── 아나운서 자막 바 ────────────────────────────────────── */
+  let narrTimer = null;
+  function showNarr(label, text){
+    const bar = $('#narrBar');
+    if(!bar) return;
+    bar.hidden = false;
+    bar.innerHTML = `<span class="nb-tag">${esc(label)}</span><span class="nb-text">${esc(text)}</span><span class="nb-eq" aria-hidden="true"><i></i><i></i><i></i></span>`;
+    requestAnimationFrame(() => bar.classList.add('on'));
+    clearTimeout(narrTimer);
+  }
+  function hideNarr(){
+    const bar = $('#narrBar');
+    if(!bar) return;
+    bar.classList.remove('on');
+    narrTimer = setTimeout(() => { bar.hidden = true; }, 400);
+  }
+  async function narrate(key, seq){
+    const n = SCENARIO.narr[key];
+    if(!n) return;
+    showNarr(n.label, n.text);
+    await AU.clip(key);
+    if(alive(seq)) hideNarr();
+  }
+
   /* ======================================================================
      장면 1 — 전화
      ====================================================================== */
   function renderCall(skip){
     const s = SCENARIO.meta;
     const root = sceneEl('call');
+    const seq = state.seq;
     root.innerHTML = `
       <div class="call-wrap">
         <div class="call-stage">
@@ -76,7 +239,7 @@
             </div>
           </div>
           <div class="scene-foot" id="callFoot">
-            <button class="btn primary" type="button" id="btnToBrief">다음 <span class="arrow" aria-hidden="true">→</span></button>
+            <button class="btn primary" type="button" id="btnToBrief">현장 상황 보기 <span class="arrow" aria-hidden="true">→</span></button>
           </div>
         </div>
       </div>`;
@@ -98,9 +261,32 @@
       el.innerHTML = `<div class="who">${item.who}</div><div class="say">${item.t}</div>`;
       dialog.appendChild(el);
       dialog.scrollTop = dialog.scrollHeight;
+      return el;
     };
 
-    function startTalk(){
+    const showMonologue = () => {
+      mono.hidden = false;
+      mono.innerHTML = SCENARIO.monologue.map((m, i) =>
+        `<div class="m-line" style="animation-delay:${i * .18}s">${m}</div>`
+      ).join('') + `<div class="m-sign">${SCENARIO.meta.me} — 품질관리자</div>`;
+    };
+
+    const finish = () => {
+      stateText.textContent = '통화 종료';
+      const bars = $('#callState .bar', root); if(bars) bars.remove();
+      actions.innerHTML = '';
+      foot.classList.add('on');
+    };
+
+    async function run(){
+      await narrate('n_call', seq);
+      if(!alive(seq)) return;
+
+      /* 벨 → 수화 */
+      AU.fx('sfx_ring', .9);
+      await wait(2600);
+      if(!alive(seq)) return;
+
       phone.classList.remove('ringing');
       const rh = $('#ringHint', root); if(rh) rh.remove();
       stateText.textContent = '통화 중';
@@ -109,68 +295,73 @@
       bars.innerHTML = '<i></i><i></i><i></i><i></i>';
       $('#callState', root).appendChild(bars);
 
-      let t = 350;
-      SCENARIO.call.forEach(item => {
-        later(() => addLine(item), t);
+      for(const item of SCENARIO.call){
+        if(!alive(seq)) return;
+        addLine(item);
         const plain = item.t.replace(/<[^>]+>/g, '');
-        t += Math.max(1400, Math.min(3200, 700 + plain.length * 55));
-      });
-      later(endTalk, t + 400);
-    }
-
-    function endTalk(collapse=true){
-      stateText.textContent = '통화 종료';
-      const bars = $('#callState .bar', root);
-      if(bars) bars.remove();
-      mono.hidden = false;
-      mono.innerHTML = SCENARIO.monologue.map((m, i) =>
-        `<div class="m-line" style="animation-delay:${i * .8}s">${m}</div>`
-      ).join('') + `<div class="m-sign">${SCENARIO.meta.me} — 품질관리자</div>`;
-      if(collapse){
-        dialog.style.transition = 'opacity .5s, max-height .6s';
-        dialog.style.maxHeight = dialog.scrollHeight + 'px';
-        later(() => { dialog.style.opacity = '0'; dialog.style.maxHeight = '0'; dialog.style.overflow = 'hidden'; }, 700);
+        const minMs = Math.max(800, Math.min(2600, 420 + plain.length * 42));
+        const started = Date.now();
+        const ok = await AU.clip(item.a);
+        const spent = Date.now() - started;
+        if(!alive(seq)) return;
+        if(!ok || spent < minMs) await wait(Math.max(120, minMs - spent));
       }
-      actions.innerHTML = '';
-      later(() => { foot.classList.add('on'); foot.scrollIntoView({behavior:'smooth', block:'center'}); }, 1100);
+
+      AU.fx('sfx_hangup', .7);
+      finish();
+      await wait(350);
+      if(!alive(seq)) return;
+      showMonologue();
+      showNarr('핵심 정리', SCENARIO.narr.n_summary.text);
+      await AU.clip('n_summary');
+      if(alive(seq)) hideNarr();
     }
 
     function skipAll(){
+      state.seq++;                 // 진행 중 시퀀스 무효화
+      AU.stopAll();
+      const mySeq = state.seq;
       clearTimers();
       dialog.innerHTML = '';
       SCENARIO.call.forEach(addLine);
       phone.classList.remove('ringing');
       stateText.textContent = '통화 종료';
-      endTalk(false);
+      const bars = $('#callState .bar', root); if(bars) bars.remove();
+      finish();
+      showMonologue();
+      hideNarr();
+      setTimeout(() => { if(alive(mySeq)) foot.classList.add('on'); }, 300);
     }
 
-    if(skip) skipAll(); else later(startTalk, 2100);
+    if(skip) skipAll(); else run();
 
     root.addEventListener('click', e => {
-      if(e.target.closest('#btnSkipCall') || e.target.closest('#btnSkipCall2')) skipAll();
+      if(e.target.closest('#btnSkipCall')) skipAll();
       if(e.target.closest('#btnToBrief')) show('brief');
     });
   }
 
   /* ======================================================================
-     장면 2 — 브리핑
+     장면 2 — 브리핑 (현장 상황)
      ====================================================================== */
   function renderBrief(){
     const b = BRIEF;
     const root = sceneEl('brief');
+    const seq = state.seq;
     root.innerHTML = `
       <div class="scene-inner">
         <div class="scene-head">
           <div>
             <div class="scene-kicker">장면 2 · 브리핑</div>
-            <h2 class="scene-title">내일 붙일 자리는 여기입니다</h2>
-            <p class="scene-sub">도면 ${b.code} / ${b.detail} — 보 웨브에 브래킷을 세워 붙이는 수직 필렛. 절차서에 적을 값은 여기와 <b>자료함</b>에서 나옵니다.</p>
+            <h2 class="scene-title">내일 용접 할 개소</h2>
+            <p class="scene-sub">도면 ${b.code} / ${b.detail} — 보 웨브에 브래킷을 세워 붙이는 수직 필렛입니다. 절차서에 적을 값은 여기와 <b>현장 상황</b>에서 나옵니다.</p>
           </div>
         </div>
 
         <div class="brief-grid">
           <div class="visual-card" id="briefVisual">
             <span class="tag">단면 · SECTION B-B / ${b.code}–${b.detail}</span>
+            <span class="weld-legend"><i></i>용접 개소</span>
             ${beamSVG('intact')}
           </div>
 
@@ -189,18 +380,18 @@
 
             <div class="drawer-box">
               <div class="drawer-head">
-                <span class="tiny">자료함 · 3</span>
+                <span class="tiny">현장 상황 · ${b.drawer.length}</span>
                 <span class="drawer-hint">눌러서 확인 — 절차서의 빈칸이 여기 있습니다</span>
               </div>
-              ${b.drawer.map((d, i) => `
-                <details class="drawer" ${i === 0 ? '' : ''}>
+              ${b.drawer.map(d => `
+                <details class="drawer">
                   <summary><span class="ic">${d.icon}</span><span class="tt">${d.title}</span><span class="sm">${d.short}</span></summary>
                   <div class="db">${d.body}</div>
                 </details>`).join('')}
             </div>
 
             <div class="note-card">${b.env} · <b>내일 07:00 −3 °C 예보</b><br>
-              추운 아침과 바람은 절차서의 예열·가스 차폐 판단에 그대로 걸립니다.</div>
+              추운 아침과 바람은 절차서의 예열·가스 차폐 판단에 그대로 영향을 줍니다.</div>
           </div>
         </div>
 
@@ -211,6 +402,7 @@
       </div>`;
     $('#btnToWps', root).addEventListener('click', () => show('wps'));
     $('#btnBackCall', root).addEventListener('click', () => show('call', {skipIntro:true}));
+    narrate('n_brief', seq);
   }
 
   /* ======================================================================
@@ -218,6 +410,7 @@
      ====================================================================== */
   function renderWps(){
     const root = sceneEl('wps');
+    const seq = state.seq;
     const groups = {};
     FIELDS.forEach(f => (groups[f.sec] = groups[f.sec] || []).push(f));
 
@@ -225,7 +418,7 @@
       const s = SECTIONS[k];
       const cls = groups[k].length === 1 ? ' one' : (groups[k].length === 3 ? ' three' : '');
       return `<div class="wps-section">
-        <div class="sec-head"><span class="n">${s.n}</span><span>${s.ko}</span><span style="color:#7d8794;font-weight:400">${s.en}</span></div>
+        <div class="sec-head"><span class="n">${s.n}</span><span>${s.ko}</span><span class="en">${s.en}</span></div>
         <div class="sec-grid${cls}">${groups[k].map(fieldHTML).join('')}</div>
       </div>`;
     }).join('');
@@ -236,12 +429,18 @@
           <div>
             <div class="scene-kicker">장면 3 · 작성</div>
             <h2 class="scene-title">빈 WPS 한 장</h2>
-            <p class="scene-sub">칸에 마우스를 올리거나 손가락으로 누르면 정보가 뜹니다. <b style="color:#9ad9f5">파란 점</b>은 현장 정보, <b style="color:#ffbd83">주황 점</b>은 규격을 보고 판단하는 칸입니다. ⭐는 감리가 먼저 보는 칸.</p>
+            <p class="scene-sub">칸을 누르거나 마우스를 올리면 근거가 뜹니다. <b class="hl-blue">파란 점</b>은 현장 정보, <b class="hl-amber">주황 점</b>은 AWS D1.1 2025년판 원문입니다. ⭐는 감리가 먼저 보는 칸.</p>
           </div>
           <div class="tray" id="tray" aria-label="놓친 정보">
             <span class="tray-k">놓친 정보</span>
             ${TRAY.map(t => `<span class="tray-i" data-tray="${t.fid}"><i>?</i>${t.label}</span>`).join('')}
           </div>
+        </div>
+
+        <div class="legend">
+          <span><i class="catdot e"></i><b>필수</b> Essential — 바꾸면 새 WPS·재인정 <em>Table 5.5</em></span>
+          <span><i class="catdot s"></i><b>추가필수</b> Supplementary — 충격시험(CVN) 시 <em>Table 6.8</em></span>
+          <span><i class="catdot n"></i><b>비필수</b> Nonessential — 허용폭 안에서 변경 <em>Table 5.5</em></span>
         </div>
 
         <div class="wps-shell">
@@ -250,17 +449,17 @@
               <div class="doc-title">
                 <span class="en">Welding Procedure Specification</span>
                 <span class="ko">용접절차 지시서</span>
-                <span class="sub">AWS D1.1/D1.1M · Carbon Steel · Fillet</span>
+                <span class="sub">AWS D1.1/D1.1M:2025 · Carbon Steel · Fillet</span>
               </div>
               <div class="doc-no">
                 WPS No. <b>WPS-SM275-F01</b> · Rev. <b>0</b><br>
-                기준 규격 <b>AWS D1.1</b> · Page 1 / 1<br>
+                기준 규격 <b>AWS D1.1/D1.1M:2025</b> · Page 1 / 1<br>
                 작성 <b>${SCENARIO.meta.me}</b>
               </div>
             </div>
             ${secHTML}
             <div class="doc-foot">
-              <div>교육용 양식 · 수치는 판본 원문 대조 전 대표값입니다.<br>실제 제작에는 계약 지정 판본과 발주처 시방서를 적용하세요.</div>
+              <div>교육용 양식입니다. 조항·표 번호와 영문 인용은 2025년판 원문을 따랐고, 수치는 교육용 대표값입니다.<br>실제 제작에는 계약 지정 판본과 발주처 시방서를 적용하세요.</div>
               <div class="sig">
                 <div><span class="k">Prepared</span><span class="v">${SCENARIO.meta.me}</span></div>
                 <div><span class="k">Reviewed</span><span class="v">—</span></div>
@@ -286,6 +485,8 @@
     updateFillCount();
     $('#btnBackBrief', root).addEventListener('click', () => show('brief'));
     $('#btnSubmit', root).addEventListener('click', onSubmit);
+    measureBar();
+    narrate('n_wps', seq);
   }
 
   function fieldHTML(f){
@@ -293,7 +494,7 @@
     let ctl = '';
     if(f.ui === 'chips'){
       ctl = `<div class="chip-row" data-field="${f.id}">` + f.options.map(o =>
-        `<button type="button" class="chip${filled === o ? ' on' : ''}" data-val="${esc(o)}">${o}</button>`
+        `<button type="button" class="chip${filled === o ? ' on' : ''}" data-val="${esc(o)}">${esc(o)}</button>`
       ).join('') + `</div>`;
     } else {
       ctl = `<div class="${f.unit ? 'has-unit' : ''}">
@@ -303,11 +504,13 @@
         ${f.unit ? `<span class="unit">${f.unit}</span>` : ''}
       </div>`;
     }
+    const c = CAT[f.cat] || CAT.e;
 
-    return `<div class="field k-${f.kind}" data-fid="${f.id}">
+    return `<div class="field k-${f.kind}" data-fid="${f.id}" data-cat="${f.cat}">
       <div class="lab">
         <b>${f.key ? '<span class="star">★</span> ' : ''}${f.label}<button class="qm" type="button" data-hint="${f.id}" aria-label="${esc(f.label)} 근거 보기">?</button></b>
         <em>${f.en}</em>
+        <span class="cat cat-${f.cat}" title="${esc(c.tip)}">${c.label}</span>
       </div>
       <div class="ctl">${ctl}</div>
       <span class="kind-dot" aria-hidden="true"></span>
@@ -342,95 +545,196 @@
     $$('.field', root).forEach(el => {
       const f = FIELDS.find(x => x.id === el.dataset.fid);
       if(!f) return;
-      el.addEventListener('mouseenter', () => openPop(el, f));
+      el.addEventListener('mouseenter', () => { if(CAN_HOVER) openPop(el, f); });
       el.addEventListener('mouseleave', () => { if(CAN_HOVER) scheduleClose(); });
       el.addEventListener('focusin',  () => openPop(el, f));
       el.addEventListener('click', e => {
         if(e.target.closest('input, .chip, .qm')) return;
-        openPop(el, f);
+        openPop(el, f, true);
       });
       const qm = $('.qm', el);
       if(qm) qm.addEventListener('click', ev => { ev.stopPropagation(); openPop(el, f, true); });
     });
   }
 
-  /* ── 팝오버 ────────────────────────────────────────────── */
-  const pop = $('#pop');
-  let popTimer = null, popField = null;
+  const CAN_HOVER = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
 
-  function scheduleClose(){ clearTimeout(popTimer); popTimer = setTimeout(closePop, 240); }
+  /* ======================================================================
+     팝오버 — 규격서 원문 카드 + 한글 해석 + 현장 의미
+     ====================================================================== */
+  const pop = $('#pop');
+  let popTimer = null, popField = null, popEl = null;
+
+  function scheduleClose(){ clearTimeout(popTimer); popTimer = setTimeout(closePop, 260); }
 
   function closePop(){
     pop.classList.remove('on');
     pop.hidden = true;
-    popField = null;
+    popField = null; popEl = null;
     $$('.field.act').forEach(e => e.classList.remove('act'));
+  }
+
+  function specCard(spec, small){
+    const tbl = spec.table ? `<table class="spec-table"><caption>${esc(spec.table.cap)}</caption><tbody>${
+      spec.table.rows.map(r => `<tr><th>${esc(r[0])}</th><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table>` : '';
+    return `<div class="spec${small ? ' small' : ''}">
+      <div class="spec-head">
+        <span class="std">AWS D1.1/D1.1M:2025</span>
+        <span class="loc">${esc(spec.ref || '')}</span>
+      </div>
+      <div class="spec-body">
+        ${spec.quote ? `<blockquote>${esc(spec.quote)}</blockquote>` : ''}
+        ${tbl}
+      </div>
+      <div class="spec-foot">원문 발췌 · American Welding Society</div>
+    </div>`;
+  }
+
+  function fillBtn(f){
+    if(!f.pop.fill) return '';
+    const label = f.pop.fill.length > 26 ? f.pop.fill.slice(0, 25) + '…' : f.pop.fill;
+    return `<button class="fill-btn" type="button" data-fill="${f.id}">
+      <span class="fb-k">이 값 넣기</span><span class="fb-v">${esc(label)}</span></button>`;
   }
 
   function openPop(el, f, pinned){
     clearTimeout(popTimer);
     if(popField === f.id && pop.classList.contains('on') && !pinned) return;
 
-    popField = f.id;
+    popField = f.id; popEl = el;
     $$('.field.act').forEach(e => e.classList.remove('act'));
     el.classList.add('act');
 
-    const isGiven = f.kind === 'given';
-    const canFill = f.ui !== 'chips' && f.pop.fill;
-    pop.innerHTML = `
-      <div class="pop-top">
-        <span class="src ${isGiven ? 'given' : 'aws'}">${isGiven ? '현장 정보' : 'AWS D1.1 근거'}</span>
-        <span class="ref mono">${f.pop.ref}</span>
-      </div>
-      <h4>${f.pop.title}</h4>
-      <p>${f.pop.body}</p>
-      ${f.pop.quote ? `<div class="quote">${f.pop.quote}</div>` : ''}
-      ${f.pop.detail ? `<div class="detail">${f.pop.detail}</div>` : ''}
-      ${canFill ? `<button class="fill-btn" type="button" id="popFill">이 값 넣기 — ${esc(f.pop.fill)}</button>` : ''}`;
-    pop.hidden = false;
-
-    if(window.innerWidth < 780){
-      pop.classList.add('bottom-sheet');
-      pop.style.left = pop.style.top = pop.style.width = '';
+    const p = f.pop;
+    if(p.kind === 'field'){
+      pop.innerHTML = `
+        <div class="pop-top">
+          <span class="src given">현장 정보</span>
+          <span class="ref mono">${esc(p.ref || '')}</span>
+        </div>
+        <h4>${p.title}</h4>
+        <p>${p.body}</p>
+        ${p.spec ? specCard(p.spec, true) : ''}
+        ${fillBtn(f)}`;
     } else {
-      pop.classList.remove('bottom-sheet');
-      const r = el.getBoundingClientRect();
-      const w = Math.min(370, window.innerWidth - 28);
-      const left = Math.min(Math.max(12, r.left + r.width * 0.3), window.innerWidth - w - 12);
-      pop.style.width = w + 'px';
-      pop.style.left = left + 'px';
-      pop.style.top = '0px';
-      const ph = pop.offsetHeight;
-      let top = r.bottom + 10;
-      if(top + ph > window.innerHeight - 12) top = Math.max(12, r.top - ph - 10);
-      pop.style.top = top + 'px';
+      pop.innerHTML = `
+        ${specCard(p)}
+        <div class="pop-ko">
+          <div class="kh">한글 해석</div>
+          <p>${p.ko}</p>
+          <div class="kh site">현장 의미</div>
+          <p>${p.site}</p>
+        </div>
+        ${fillBtn(f)}`;
     }
-    requestAnimationFrame(() => pop.classList.add('on'));
-
-    const fillBtn = $('#popFill');
-    if(fillBtn) fillBtn.addEventListener('click', () => {
-      const input = $(`input[data-field="${f.id}"]`);
-      if(input){
-        input.value = f.pop.fill;
-        state.answers[f.id] = f.pop.fill;
-        input.closest('.field').classList.remove('missing','bad');
-        updateFillCount();
-        input.focus();
-      }
+    pop.hidden = false;
+    pop.classList.remove('on');
+    requestAnimationFrame(() => {
+      if(popField !== f.id) return;      // 그 사이 닫혔으면 되살리지 않는다
+      placePop(el);
+      pop.classList.add('on');
     });
   }
 
+  function placePop(el){
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const bar = $('.submit-bar');
+    const barH = bar ? Math.min(bar.getBoundingClientRect().height, 180) : 0;
+    const r = el.getBoundingClientRect();
+    const mobile = vw < 780;
+
+    pop.style.maxHeight = '';
+    if(mobile){
+      pop.classList.add('sheet');
+      pop.style.left = pop.style.top = pop.style.width = '';
+      pop.style.setProperty('--sheet-bottom', (barH + 14) + 'px');
+      pop.style.maxHeight = Math.max(200, vh - barH - 96) + 'px';
+      return;
+    }
+    pop.classList.remove('sheet');
+    pop.classList.remove('side-r','side-l');
+    pop.style.setProperty('--sheet-bottom', '0px');
+    const w = Math.min(430, vw - 24);
+    pop.style.width = w + 'px';
+    const ph = pop.offsetHeight;
+    const maxH = vh - barH - 96;
+    const clampTop = t => Math.min(Math.max(72, t), Math.max(72, vh - barH - Math.min(ph, maxH) - 12));
+    const rightRoom = vw - r.right - 16;
+    const leftRoom = r.left - 16;
+    let left, top;
+    if(rightRoom >= w){                       // 칸 오른쪽에 붙인다 — 칸을 가리지 않는다
+      left = r.right + 14; top = clampTop(r.top - 18);
+      pop.classList.add('side-r');
+    } else if(leftRoom >= w){                 // 오른쪽이 좁으면 왼쪽
+      left = r.left - w - 14; top = clampTop(r.top - 18);
+      pop.classList.add('side-l');
+    } else {                                  // 좁은 화면: 아래 → 위
+      const below = vh - barH - r.bottom - 14;
+      const above = r.top - 78;
+      if(ph <= below || below >= above){ top = clampTop(r.bottom + 10); }
+      else { top = clampTop(r.top - Math.min(ph, maxH) - 10); }
+      left = Math.min(Math.max(12, r.left + r.width * 0.22), vw - w - 12);
+      pop.classList.toggle('flip', top < r.top);
+    }
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+    if(ph > maxH) pop.style.maxHeight = Math.max(180, maxH) + 'px';
+  }
+
+  /* 값 넣기 — input · chip 모두 실제 반영 */
+  function applyFill(fid){
+    const f = FIELDS.find(x => x.id === fid);
+    if(!f || !f.pop.fill) return;
+    const field = $(`.field[data-fid="${fid}"]`);
+    if(!field) return;
+    const val = f.pop.fill;
+
+    if(f.ui === 'chips'){
+      const chip = $$('.chip', field).find(c => c.dataset.val === val);
+      if(chip){ chip.click(); }
+      else { state.answers[fid] = val; updateFillCount(); }
+    } else {
+      const inp = $('input', field);
+      if(inp){
+        inp.value = val;
+        state.answers[fid] = val;
+        inp.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+    }
+    field.classList.remove('missing','bad');
+    field.classList.add('filled');
+    setTimeout(() => field.classList.remove('filled'), 1200);
+    updateFillCount();
+
+    const btn = $('.fill-btn', pop);
+    if(btn){
+      btn.classList.add('done');
+      btn.querySelector('.fb-k').textContent = '✓ 들어갔습니다';
+      btn.querySelector('.fb-v').textContent = val;
+    }
+    if(window.innerWidth < 780) setTimeout(closePop, 420);
+  }
+
   pop.addEventListener('mouseenter', () => clearTimeout(popTimer));
-  pop.addEventListener('mouseleave', scheduleClose);
+  pop.addEventListener('mouseleave', () => { if(CAN_HOVER) scheduleClose(); });
+  pop.addEventListener('click', e => {
+    const b = e.target.closest('.fill-btn');
+    if(b && !b.classList.contains('done')){ e.preventDefault(); applyFill(b.dataset.fill); }
+  });
   document.addEventListener('click', e => {
     if(pop.hidden) return;
     if(e.target.closest('#pop') || e.target.closest('.field')) return;
     closePop();
   });
   document.addEventListener('keydown', e => { if(e.key === 'Escape') closePop(); });
+  /* 스크롤해도 팝오버를 닫지 않고 위치만 따라가게 한다 (포커스 스크롤로 사라지던 문제) */
+  let scrollRaf = null;
   window.addEventListener('scroll', () => {
-    if(!pop.hidden && !pop.classList.contains('bottom-sheet')) closePop();
+    if(pop.hidden || !popEl || pop.classList.contains('sheet')) return;
+    if(scrollRaf) return;
+    scrollRaf = requestAnimationFrame(() => { scrollRaf = null; if(popEl && !pop.hidden) placePop(popEl); });
   }, {passive:true});
+  window.addEventListener('resize', () => { if(popEl && !pop.hidden) placePop(popEl); });
 
   /* ── 작성 카운트 · 트레이 ──────────────────────────────── */
   function isFilled(f){
@@ -449,6 +753,11 @@
         el.querySelector('i').textContent = on ? '✓' : '?';
       }
     });
+  }
+
+  function measureBar(){
+    const bar = $('.submit-bar');
+    if(bar) document.documentElement.style.setProperty('--barbar', bar.getBoundingClientRect().height + 'px');
   }
 
   /* ── 채점 ──────────────────────────────────────────────── */
@@ -481,7 +790,10 @@
         return;
       }
       if(checkField(f, state.answers[f.id])) score += f.weight;
-      else { if(el) el.classList.add('bad'); errors.push({ f, val: state.answers[f.id] }); }
+      else {
+        if(el){ el.classList.add('bad'); }
+        errors.push({ f, val: state.answers[f.id] });
+      }
     });
 
     if(missing > 0){
@@ -505,14 +817,13 @@
     if(!el){
       el = document.createElement('div');
       el.id = 'flashBar';
-      el.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1b1f25;border:1px solid rgba(255,154,60,.5);color:#ffd8b3;padding:11px 18px;border-radius:999px;font-size:13px;z-index:90;box-shadow:0 20px 40px -20px #000;max-width:90vw;text-align:center';
       document.body.appendChild(el);
     }
     el.textContent = msg;
     el.style.transition = 'none';
     el.style.opacity = '1';
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.style.transition = 'opacity .5s'; el.style.opacity = '0'; }, 2800);
+    toastTimer = setTimeout(() => { el.style.transition = 'opacity .5s'; el.style.opacity = '0'; }, 3200);
   }
 
   /* ======================================================================
@@ -521,6 +832,7 @@
   function renderResult(res){
     if(!res) return show('landing');
     const root = sceneEl('result');
+    const seq = state.seq;
     const { pass, score, errors } = res;
     const crit = errors.filter(e => e.f.crit);
     const soft = errors.filter(e => !e.f.crit);
@@ -536,7 +848,7 @@
 
     if(pass){
       root.innerHTML = `<div class="res-wrap"><div class="res-grid">
-        <div class="res-visual" id="resVisual">${beamSVG('pass', null, '232 74 340 274')}</div>
+        <div class="res-visual" id="resVisual">${beamSVG('pass', null, '204 12 392 384')}</div>
         <div class="res-copy">
           <div class="res-badge ok">● 검사 통과</div>
           <div class="res-score"><span class="n">${score}</span><span class="d">/ 100</span></div>
@@ -554,18 +866,28 @@
           </div>
         </div></div></div>`;
 
-      const box = $('#thanksLines', root);
-      SCENARIO.successCall.forEach((l, i) => later(() => {
-        const p = document.createElement('div');
-        p.className = 'say' + (l.strong ? ' strong' : '');
-        p.style.cssText = 'margin:0 0 8px;opacity:0;transition:opacity .6s';
-        p.innerHTML = `<b>${l.who}</b> ${l.t}`;
-        box.appendChild(p);
-        requestAnimationFrame(() => p.style.opacity = '1');
-      }, 1100 + i * 1700));
+      (async () => {
+        await narrate('n_pass', seq);
+        if(!alive(seq)) return;
+        const box = $('#thanksLines', root);
+        for(const l of SCENARIO.successCall){
+          if(!alive(seq)) return;
+          const p = document.createElement('div');
+          p.className = 'say' + (l.strong ? ' strong' : '');
+          p.innerHTML = `<b>${l.who}</b> ${l.t}`;
+          box.appendChild(p);
+          requestAnimationFrame(() => p.classList.add('in'));
+          await AU.clip(l.a);
+          if(!alive(seq)) return;
+          await wait(320);
+        }
+      })();
     } else {
       root.innerHTML = `<div class="res-wrap"><div class="res-grid">
-        <div class="res-visual" id="resVisual">${beamSVG('fail', ft.id, '232 74 340 274')}</div>
+        <div class="res-visual fail-visual" id="resVisual">
+          <div class="collapse-stage" id="collapseStage">${collapseSVG(ft.id)}</div>
+          <div class="dust-layer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
         <div class="res-copy">
           <div class="res-badge bad">● 부적합 — ${ft.label}</div>
           <div class="res-score"><span class="n">${score}</span><span class="d">/ 100</span></div>
@@ -574,7 +896,7 @@
           <div class="thanks-call fail">
             <div class="ct"><div class="av">박</div>
               <div class="who"><b>${SCENARIO.meta.caller}</b><span>${SCENARIO.meta.callerRole} · 긴급</span></div></div>
-            <div class="say" id="failCall"></div>
+            <div id="failLines"></div>
           </div>
           <div id="errZone" style="opacity:0;transition:opacity .6s">
             <div class="err-h">오류 항목 · 근거 (${crit.length}건 치명 / ${soft.length}건 보완)</div>
@@ -585,10 +907,7 @@
             <button class="btn ghost" type="button" id="btnRestart2">처음부터</button>
           </div>
         </div></div></div>`;
-      later(() => {
-        const f = $('#failCall', root);
-        if(f) f.innerHTML = `<b>${SCENARIO.failCall.who}</b> ${SCENARIO.failCall.t}`;
-      }, 600);
+      runCollapse(ft, root, seq);
     }
 
     const again = $('#btnAgain', root);
@@ -599,32 +918,62 @@
     });
     const rs = $('#btnRestart2', root);
     if(rs) rs.addEventListener('click', restart);
-
-    if(!pass) playFracture(ft);
   }
 
-  function playFracture(ft){
+  /* ── 불합격: 철골 붕괴 연출 ─────────────────────────────── */
+  function runCollapse(ft, root, seq){
+    const stage = $('#collapseStage', root);
+    const visual = $('#resVisual', root);
     const flash = $('#flash');
     const impact = $('#impactText');
-    const visual = $('#resVisual');
-    if(!visual) return;
 
-    later(() => visual.classList.add('broken'), 900);
+    if(stage) stage.classList.add('crack');
+    later(() => AU.fx('sfx_crack', .9), 350);
+
     later(() => {
-      impact.textContent = (ft.id === 'reject' ? '반려' : '파단');
-      flash.classList.add('on');
-      impact.classList.add('on');
+      if(!alive(seq)) return;
+      if(stage) stage.classList.add('run');
+      if(visual) visual.classList.add('shake-hard');
+      AU.fx('sfx_collapse', .95);
       document.body.classList.add('shake');
-      setTimeout(() => document.body.classList.remove('shake'), 420);
-    }, 2150);
+      setTimeout(() => document.body.classList.remove('shake'), 700);
+      flash.classList.add('on');
+      impact.textContent = '붕괴';
+      impact.classList.add('on');
+      setTimeout(() => { impact.classList.remove('on'); }, 2100);
+    }, 1150);
+
+    later(() => { if(visual) visual.classList.remove('shake-hard'); }, 2600);
+
+    (async () => {
+      await wait(1500);
+      if(!alive(seq)) return;
+      const box = $('#failLines', root);
+      for(const l of SCENARIO.failCall){
+        if(!alive(seq)) return;
+        const p = document.createElement('div');
+        p.className = 'say alert';
+        p.innerHTML = `<b>${l.who}</b> ${l.t}`;
+        box.appendChild(p);
+        requestAnimationFrame(() => p.classList.add('in'));
+        await AU.clip(l.a);
+        await wait(240);
+      }
+      if(!alive(seq)) return;
+      await narrate('n_fail', seq);
+      if(!alive(seq)) return;
+      await narrate(ft.cause || 'n_cause_reject', seq);
+    })();
+
     later(() => {
+      if(!alive(seq)) return;
       const z = $('#errZone');
       if(z) z.style.opacity = '1';
-    }, 3000);
+    }, 5200);
   }
 
   /* ======================================================================
-     철골 단면 SVG — intact / pass / fail(파단 유형별)
+     철골 단면 SVG — intact / pass (필렛 마커 포함)
      ====================================================================== */
   function beamSVG(mode, fracId, view){
     const vb = view || '152 18 418 356';
@@ -636,13 +985,6 @@
       porosity:'M290 172 L318 172 L346 172',
       reject:  ''
     }[fracId || 'hydrogen'];
-
-    const porosityDots = (isFail && fracId === 'porosity')
-      ? Array.from({length:12}, (_, i) => {
-          const x = 292 + (i % 6) * 12, y = 168 + Math.floor(i / 6) * 12;
-          return `<circle class="pore" cx="${x}" cy="${y}" r="${2.2 + (i % 3)}" fill="#0a0d10" stroke="#ff6b5b" stroke-width="1" style="animation-delay:${i * .08}s"/>`;
-        }).join('')
-      : '';
 
     return `<svg viewBox="${vb}" width="100%" role="img"
       aria-label="보 웨브와 브래킷 필렛 접합 단면" class="beam-svg ${isFail ? 'fail' : 'ok'}">
@@ -662,19 +1004,12 @@
         <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       </defs>
 
-      <g opacity=".2">
+      <g class="grid" opacity=".2">
         ${Array.from({length:17},(_,i)=>`<line x1="${i*40}" y1="0" x2="${i*40}" y2="400" stroke="#1b2128" stroke-width="1"/>`).join('')}
         ${Array.from({length:10},(_,i)=>`<line x1="0" y1="${i*40}" x2="680" y2="${i*40}" stroke="#1b2128" stroke-width="1"/>`).join('')}
       </g>
 
-      ${isFail ? `<g class="load-arrow">
-        <line x1="600" y1="56" x2="600" y2="128" stroke="#ff8a7a" stroke-width="2" stroke-dasharray="5 4"/>
-        <path d="M600 138 L593 124 L607 124 Z" fill="#ff8a7a"/>
-        <text x="606" y="70" fill="#ff8a7a" font-size="10" font-family="monospace">P ↓</text>
-      </g>` : ''}
-
       <g class="web-part">
-        <!-- 상·하 플랜지 + 웨브 (H형강 단면) -->
         <rect x="222" y="30" width="88" height="15" fill="url(#steelG)"/>
         <rect x="222" y="30" width="88" height="15" fill="url(#hatch)" opacity=".5"/>
         <rect x="222" y="30" width="88" height="15" fill="none" stroke="#4d5763" stroke-width="1.1"/>
@@ -704,13 +1039,14 @@
           <path d="M280 200 L280 222 L306 200" fill="none" stroke="#7cf0b0" stroke-width="2.2" filter="url(#glow)" opacity=".9"/>` : ''}
       </g>
 
-      ${isFail && crack ? `<path class="crack-line" d="${crack}" fill="none" stroke="#ff5d4d" stroke-width="2.6" filter="url(#glow)"/>` : ''}
-      ${porosityDots}
+      ${fraсIdSafe()}
 
-      <g class="sparks">
-        ${isFail ? [ [-26,-34], [34,-24], [-14,38], [26,30], [0,-44] ].map(([dx,dy],i) =>
-          `<line class="spark" x1="300" y1="182" x2="300" y2="182" stroke="${i%2?'#ff9a3c':'#ffcf9a'}" stroke-width="2" style="--dx:${dx}px;--dy:${dy}px;animation-delay:${i*.07}s"/>`).join('') : ''}
-      </g>
+      ${mode === 'intact' ? `<g class="weld-pulse" aria-hidden="true">
+        <circle cx="287" cy="169" r="9"/>
+        <circle cx="287" cy="209" r="9"/>
+      </g>` : ''}
+
+      ${isFail && crack ? `<path class="crack-line" d="${crack}" fill="none" stroke="#ff5d4d" stroke-width="2.6" filter="url(#glow)"/>` : ''}
 
       <g stroke="#3d4652" stroke-width="1" fill="none">
         <line x1="306" y1="150" x2="306" y2="228" stroke="#ff9a3c" stroke-width="1" opacity=".5"/>
@@ -721,30 +1057,153 @@
       ${mode === 'pass' ? `
         <g opacity=".95"><rect x="382" y="104" width="150" height="34" rx="4" fill="none" stroke="#4bd29a" stroke-width="1.4" transform="rotate(-6 457 121)"/>
         <text x="408" y="128" fill="#8ff0c4" font-size="15" font-family="monospace" font-weight="700" transform="rotate(-6 457 121)">PASS</text></g>` : ''}
+    </svg>`;
+  }
+  function fraсIdSafe(){ return ''; }
 
-      ${isFail && fracId === 'reject' ? `
-        <g opacity=".95" class="stamp-reject"><rect x="330" y="96" width="196" height="42" rx="4" fill="none" stroke="#ff5d4d" stroke-width="2" transform="rotate(-7 428 117)"/>
-        <text x="348" y="125" fill="#ff7b6b" font-size="16" font-family="monospace" font-weight="700" transform="rotate(-7 428 117)">REJECTED</text></g>` : ''}
+  /* ======================================================================
+     불합격 — 철골 골조 붕괴 SVG (기둥 좌굴 · 보 낙하 · 파단 스파크 · 먼지)
+     ====================================================================== */
+  function collapseSVG(kind){
+    const debris = [[-52,-30,26,6,14],[-30,-58,18,5,-22],[40,-26,30,6,18],[66,-48,16,4,-16],
+                    [-16,24,22,5,28],[52,30,24,5,-26],[-70,10,14,4,40],[78,4,18,4,-38]]
+      .map(([dx,dy,w,h,rot],i)=>`<rect class="deb" x="300" y="246" width="${w}" height="${h}" rx="1"
+        style="--dx:${dx}px;--dy:${dy}px;--rot:${rot}deg;animation-delay:${0.55 + i*0.03}s"/>`).join('');
+
+    return `<svg viewBox="0 0 660 470" width="100%" role="img" aria-label="철골 골조 붕괴 장면" class="collapse-svg">
+      <defs>
+        <linearGradient id="csSteel" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#4a545f"/><stop offset=".6" stop-color="#252c34"/><stop offset="1" stop-color="#141a20"/>
+        </linearGradient>
+        <pattern id="csHatch" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+          <line x1="0" y1="0" x2="0" y2="8" stroke="#333c46" stroke-width="1.3"/>
+        </pattern>
+        <filter id="csGlow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+
+      <rect x="0" y="0" width="660" height="470" fill="#080a0c"/>
+      <g opacity=".18">
+        ${Array.from({length:15},(_,i)=>`<line x1="${i*48}" y1="0" x2="${i*48}" y2="470" stroke="#1b2128"/>`).join('')}
+        ${Array.from({length:10},(_,i)=>`<line x1="0" y1="${i*48}" x2="660" y2="${i*48}" stroke="#1b2128"/>`).join('')}
+      </g>
+
+      <!-- 지반 -->
+      <line x1="30" y1="430" x2="630" y2="430" stroke="#2c343d" stroke-width="2"/>
+      <g opacity=".7">
+        ${Array.from({length:14},(_,i)=>`<line x1="${44+i*42}" y1="430" x2="${34+i*42}" y2="444" stroke="#232a32" stroke-width="2"/>`).join('')}
+      </g>
+
+      <g class="frame">
+        <!-- 기둥 -->
+        <g class="col col-l">
+          <rect x="150" y="96" width="30" height="334" fill="url(#csSteel)"/>
+          <rect x="150" y="96" width="30" height="334" fill="url(#csHatch)" opacity=".55"/>
+          <rect x="150" y="96" width="30" height="334" fill="none" stroke="#55606c" stroke-width="1.2"/>
+          <rect x="136" y="424" width="58" height="8" fill="#39424d"/>
+        </g>
+        <g class="col col-r">
+          <rect x="480" y="96" width="30" height="334" fill="url(#csSteel)"/>
+          <rect x="480" y="96" width="30" height="334" fill="url(#csHatch)" opacity=".55"/>
+          <rect x="480" y="96" width="30" height="334" fill="none" stroke="#55606c" stroke-width="1.2"/>
+          <rect x="466" y="424" width="58" height="8" fill="#39424d"/>
+        </g>
+
+        <!-- 상부 보 -->
+        <g class="beam beam-top">
+          <rect x="150" y="84" width="360" height="26" fill="url(#csSteel)"/>
+          <rect x="150" y="84" width="360" height="26" fill="url(#csHatch)" opacity=".5"/>
+          <rect x="150" y="84" width="360" height="26" fill="none" stroke="#55606c" stroke-width="1.2"/>
+        </g>
+
+        <!-- 중간 보 -->
+        <g class="beam beam-mid">
+          <rect x="180" y="266" width="300" height="22" fill="url(#csSteel)"/>
+          <rect x="180" y="266" width="300" height="22" fill="url(#csHatch)" opacity=".5"/>
+          <rect x="180" y="266" width="300" height="22" fill="none" stroke="#55606c" stroke-width="1.2"/>
+        </g>
+
+        <!-- 브래킷 + 필렛 -->
+        <g class="bracket-g">
+          <rect x="252" y="236" width="96" height="30" fill="url(#csSteel)"/>
+          <rect x="252" y="236" width="96" height="30" fill="url(#csHatch)" opacity=".5"/>
+          <rect x="252" y="236" width="96" height="30" fill="none" stroke="#6a7684" stroke-width="1.2"/>
+          <path d="M252 236 L252 222 L266 236 Z" fill="#7d8896"/>
+          <path d="M348 236 L348 222 L334 236 Z" fill="#7d8896"/>
+          <circle class="weld-hot" cx="252" cy="230" r="4"/>
+          <circle class="weld-hot" cx="348" cy="230" r="4" style="animation-delay:.2s"/>
+        </g>
+
+        <!-- 가새 -->
+        <g class="brace">
+          <line x1="180" y1="288" x2="330" y2="110" stroke="#39424d" stroke-width="6"/>
+          <line x1="480" y1="288" x2="330" y2="110" stroke="#39424d" stroke-width="6"/>
+        </g>
+
+        <!-- 용접부 균열 -->
+        <path class="cs-crack" d="M252 230 L240 246 L246 262 L232 280" fill="none"
+          stroke="#ff6152" stroke-width="2.6" filter="url(#csGlow)"/>
+
+        <!-- 스파크 -->
+        <g class="cs-sparks">
+          ${[[-30,-26],[26,-18],[-18,22],[20,26],[4,-34],[-40,6]].map(([dx,dy],i)=>
+            `<line class="cs-spark" x1="252" y1="230" x2="252" y2="230" stroke="${i%2?'#ffb066':'#fff1c9'}"
+              stroke-width="1.8" style="--dx:${dx}px;--dy:${dy}px;animation-delay:${0.03*i}s"/>`).join('')}
+        </g>
+      </g>
+
+      <!-- 낙하 파편 -->
+      <g class="debris">${debris}</g>
+
+      <!-- 잔해 -->
+      <g class="rubble" aria-hidden="true">
+        <polygon points="150,430 214,430 236,404 190,412" fill="#4a545f"/>
+        <polygon points="330,430 424,430 398,398 356,408" fill="#3f4954"/>
+        <polygon points="452,430 540,430 512,410 470,414" fill="#4a545f"/>
+        <rect x="252" y="404" width="86" height="16" rx="2" fill="#555f6b" transform="rotate(-9 295 412)"/>
+        <rect x="404" y="398" width="60" height="12" rx="2" fill="#4d5763" transform="rotate(12 434 404)"/>
+      </g>
+
+      <!-- 판정 스탬프 -->
+      <g class="cs-stamp" aria-hidden="true">
+        <rect x="392" y="146" width="208" height="48" rx="4" fill="none" stroke="#ff5d4d" stroke-width="2.6" transform="rotate(-7 496 170)"/>
+        <text x="424" y="180" fill="#ff7b6b" font-size="23" font-weight="700" font-family="'Pretendard Variable',sans-serif" transform="rotate(-7 496 170)">붕괴</text>
+      </g>
+
+      <!-- 먼지 -->
+      <g class="cs-dust">
+        <ellipse cx="210" cy="428" rx="90" ry="26" fill="#8d99a6" opacity=".0"/>
+        <ellipse cx="400" cy="430" rx="120" ry="30" fill="#7b8794" opacity=".0"/>
+        <ellipse cx="320" cy="424" rx="70" ry="22" fill="#9aa6b3" opacity=".0"/>
+      </g>
     </svg>`;
   }
 
+  /* ======================================================================
+     기타
+     ====================================================================== */
   function restart(){
     clearTimers();
     state.answers = {};
     closePop();
+    AU.stopAll();
     show('landing');
     window.scrollTo({top:0});
   }
 
-  /* ── 시작 ──────────────────────────────────────────────── */
-  $('#btnStart').addEventListener('click', () => show('call'));
+  /* 시작 */
+  AU.init();
+  $('#btnStart').addEventListener('click', () => { AU.startBgm(); show('call'); });
   $('#btnRestart').addEventListener('click', () => {
     if(state.scene === 'landing') return;
     if(confirm('처음부터 다시 시작할까요? 작성한 내용은 사라집니다.')) restart();
   });
+  const mute = $('#btnMute');
+  if(mute) mute.addEventListener('click', () => AU.setMuted(!AU.muted));
+  const bgmBtn = $('#btnBgm');
+  if(bgmBtn) bgmBtn.addEventListener('click', () => AU.setBgm(!AU.bgmOn));
   document.addEventListener('keydown', e => {
     if(state.scene === 'landing' && (e.key === 'Enter' || e.key === ' ')){
-      e.preventDefault(); show('call');
+      e.preventDefault(); AU.startBgm(); show('call');
     }
   });
 })();

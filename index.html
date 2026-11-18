@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>WPS작성 실습 · 철골 필렛 · AWS D1.1</title>
-<meta name="description" content="전화 한 통으로 시작되는 하루 — SM275 철골 필렛 용접의 WPS 한 장을 직접 작성하고 채점받는 강의 실습 웹앱 (교육용)" />
+<title>WPS작성 실습 · 철골 필렛 · AWS D1.1 2025</title>
+<meta name="description" content="전화 한 통으로 시작되는 하루 — SM275 철골 필렛 용접의 WPS 한 장을 직접 작성하고 채점받는 강의 실습 웹앱 (AWS D1.1/D1.1M:2025 원문 대조 · 교육용)" />
 <meta name="theme-color" content="#07080a" />
 <link rel="stylesheet" href="styles.css" />
 </head>
@@ -16,12 +16,20 @@
     <span class="brand-mark">W</span>
     <div class="brand-txt">
       <b>WPS작성 실습</b>
-      <em>철골 필렛 · AWS D1.1</em>
+      <em>철골 필렛 · AWS D1.1 2025</em>
     </div>
   </div>
   <div class="top-right">
     <div class="progress-dots" id="progressDots" aria-hidden="true">
       <i></i><i></i><i></i><i></i>
+    </div>
+    <div class="audio-ctrls" role="group" aria-label="소리 설정">
+      <button class="pill-btn audio" id="btnBgm" type="button" aria-pressed="true" title="배경음악 켜기/끄기">
+        <span class="ico" aria-hidden="true">♫</span><span class="lbl">BGM</span>
+      </button>
+      <button class="pill-btn audio" id="btnMute" type="button" aria-pressed="false" title="소리 끄기">
+        <span class="ico" aria-hidden="true">🔊</span><span class="lbl">소리 켜짐</span>
+      </button>
     </div>
     <button class="pill-btn" id="btnRestart" type="button">처음부터</button>
   </div>
@@ -42,11 +50,11 @@
         <dl class="hero-facts">
           <div><dt>모재</dt><dd>SM275 · 12 mm</dd></div>
           <div><dt>이음</dt><dd>필렛 6 mm · 3F</dd></div>
-          <div><dt>기준</dt><dd>AWS D1.1/D1.1M</dd></div>
+          <div><dt>기준</dt><dd>AWS D1.1/D1.1M:2025</dd></div>
         </dl>
       </div>
 
-      <aside class="hero-panel" aria-label="현장 개요">
+      <aside class="hero-panel" aria-label="현장 상황판">
         <div class="panel-head">
           <span class="k">현장 상황판</span>
           <span class="v mono">07:42 · 사무소</span>
@@ -87,6 +95,12 @@
           <path d="M184 155 L210 133" stroke="url(#heroGlow)" stroke-width="1.6" filter="url(#heroBlur)" opacity=".55"/>
           <path d="M184 94 L210 116 M184 155 L210 133" stroke="#ffb066" stroke-width="1.1" opacity=".9"/>
 
+          <!-- 용접 개소 표시 (빨간 50% 펄스) -->
+          <g class="weld-pulse" aria-hidden="true">
+            <circle cx="189" cy="107" r="8"/>
+            <circle cx="189" cy="143" r="8"/>
+          </g>
+
           <!-- 치수 -->
           <g stroke="#4a545f" stroke-width="1">
             <line x1="158" y1="242" x2="184" y2="242"/>
@@ -117,11 +131,11 @@
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h11M9 3.5L13.5 8 9 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
       </button>
-      <span class="cta-hint">버튼 하나로 시작 — 약 12분 · 마우스 오버 또는 터치로 규격 확인</span>
+      <span class="cta-hint">버튼 하나로 시작 — 약 12분 · 음성 해설과 함께 진행됩니다</span>
     </div>
 
     <div class="landing-foot">
-      <span>교육용 실습 자료 · 화면의 WPS·도면·서명은 모두 가상입니다</span>
+      <span>교육용 실습 자료 · 화면의 WPS·도면·서명은 모두 가상입니다 · 원문 기준 AWS D1.1/D1.1M:2025</span>
       <span class="mono">SM275 / FILLET / 3F</span>
     </div>
   </section>
@@ -140,9 +154,12 @@
 
 </main>
 
+<!-- 아나운서 내레이션 자막 -->
+<div class="narr-bar" id="narrBar" hidden aria-live="polite"></div>
+
 <div class="pop" id="pop" role="dialog" aria-live="polite" hidden></div>
 <div class="fracture-flash" id="flash" aria-hidden="true"></div>
-<div class="impact-text" id="impactText" aria-hidden="true">파단</div>
+<div class="impact-text" id="impactText" aria-hidden="true">붕괴</div>
 
 <script src="data.js"></script>
 <script src="app.js"></script>

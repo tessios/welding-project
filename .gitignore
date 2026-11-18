@@ -1,3 +1,5 @@
 screenshots/
 shots/
 .DS_Store
+.audio_tmp/
+.tmp_pron*/

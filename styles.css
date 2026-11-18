@@ -735,3 +735,312 @@ body.shake{animation:shakeIt .42s cubic-bezier(.36,.07,.19,.97)}
 .rh-dot:nth-child(2){animation-delay:.18s}
 .rh-dot:nth-child(3){animation-delay:.36s}
 @keyframes rhPulse{0%,100%{opacity:.25;transform:scale(.9)}50%{opacity:1;transform:scale(1.15)}}
+
+/* =========================================================================
+   2차 고도화 — 음성·배경음악 · 원문 팝오버 · 필수 배지 · 용접 개소 펄스 · 붕괴 연출
+   ========================================================================= */
+
+/* 상단 오디오 컨트롤 ---------------------------------------------------- */
+.audio-ctrls{display:flex;align-items:center;gap:6px;margin-right:2px}
+.pill-btn.audio{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;font-size:11.5px;letter-spacing:.02em}
+.pill-btn.audio .ico{font-size:11px;line-height:1;transition:.2s}
+.pill-btn.audio.playing .ico{color:var(--arc);animation:bgmBeat 1.9s ease-in-out infinite}
+.pill-btn.audio.off{opacity:.42}
+@keyframes bgmBeat{0%,100%{transform:scale(1);opacity:.75}50%{transform:scale(1.2);opacity:1}}
+
+/* 아나운서 자막 바 ------------------------------------------------------ */
+.narr-bar{
+  position:fixed;left:50%;z-index:70;
+  bottom:calc(var(--barbar, 0px) + 18px + env(safe-area-inset-bottom));
+  transform:translate(-50%,14px);
+  display:flex;align-items:center;gap:11px;
+  width:min(860px,calc(100vw - 28px));
+  padding:11px 15px;border-radius:13px;
+  border:1px solid rgba(255,154,60,.3);
+  background:rgba(11,13,16,.93);backdrop-filter:blur(13px);
+  box-shadow:0 26px 60px -34px #000;
+  opacity:0;transition:opacity .32s var(--ease),transform .32s var(--ease);
+  font-size:12.6px;line-height:1.62;color:#eadfd2;pointer-events:none;
+}
+.narr-bar[hidden]{display:none}
+.narr-bar.on{opacity:1;transform:translate(-50%,0)}
+.nb-tag{
+  flex:none;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:#ffc492;border:1px solid rgba(255,154,60,.38);padding:3px 8px;border-radius:999px;
+  background:rgba(255,154,60,.09);
+}
+.nb-text{flex:1;min-width:0}
+.nb-eq{display:flex;align-items:flex-end;gap:2px;height:12px;flex:none}
+.nb-eq i{display:block;width:2px;height:4px;background:var(--arc);border-radius:1px;animation:vu 1s infinite ease-in-out}
+.nb-eq i:nth-child(2){animation-delay:.16s}.nb-eq i:nth-child(3){animation-delay:.32s}
+
+/* 필수/추가필수/비필수 범례 -------------------------------------------- */
+.legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:0 0 12px;font-size:11.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend b{color:var(--ink-2);font-weight:600}
+.legend em{font-style:normal;font-size:10.5px;color:var(--dim)}
+.catdot{width:8px;height:8px;border-radius:2px;flex:none}
+.catdot.e{background:#ff5d5d}.catdot.s{background:#e9822b}.catdot.n{background:#8b96a3}
+
+/* 칸별 배지 ------------------------------------------------------------ */
+.field .cat{
+  display:inline-flex;align-items:center;width:max-content;margin-top:3px;
+  font-size:9px;line-height:1.55;letter-spacing:.02em;padding:0 6px;border-radius:999px;
+  border:1px solid transparent;font-weight:600;
+}
+.field .cat-e{color:#b3261e;border-color:#efb6b1;background:#fdeceb}
+.field .cat-s{color:#9a5711;border-color:#f0cda3;background:#fdf3e5}
+.field .cat-n{color:#4a545f;border-color:#d2d8e0;background:#f1f4f7}
+.field.filled{animation:fieldFill .95s ease-out}
+@keyframes fieldFill{0%{background:#ddf3e5}100%{background:transparent}}
+
+/* 용접 개소 — 빨간 50% 펄스 ------------------------------------------- */
+.weld-pulse circle{
+  fill:rgba(239,68,68,.5);
+  transform-box:fill-box;transform-origin:center;
+  animation:weldPulse 1.9s ease-in-out infinite;
+  filter:drop-shadow(0 0 6px rgba(239,68,68,.4));
+}
+.weld-pulse circle:nth-child(2){animation-delay:.45s}
+@keyframes weldPulse{0%,100%{transform:scale(.75);opacity:.55}50%{transform:scale(1.2);opacity:.95}}
+.weld-legend{
+  position:absolute;top:14px;right:14px;z-index:3;display:flex;align-items:center;gap:7px;
+  font-size:10.5px;color:#ffc0bd;border:1px solid rgba(239,68,68,.35);border-radius:999px;
+  padding:5px 10px;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);
+}
+.weld-legend i{width:8px;height:8px;border-radius:50%;background:rgba(239,68,68,.5);animation:weldPulse 1.9s ease-in-out infinite}
+
+/* 팝오버 — 규격서 원문 카드 ------------------------------------------- */
+.pop{
+  z-index:90;width:min(430px,calc(100vw - 24px));
+  max-height:calc(100vh - 110px);overflow-y:auto;overscroll-behavior:contain;
+  padding:0;border-radius:14px;border:1px solid rgba(255,255,255,.14);
+  background:#0b0d10;box-shadow:0 34px 80px -30px rgba(0,0,0,.92),inset 0 1px 0 rgba(255,255,255,.06);
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent;
+}
+.pop::-webkit-scrollbar{width:6px}
+.pop::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:99px}
+.pop .spec{background:linear-gradient(180deg,#fbf8ef,#f3efe4);color:#20242a;border-bottom:1px solid #d7d1c0}
+.pop .spec-head{
+  display:flex;align-items:center;gap:10px;padding:9px 14px;
+  background:#232830;color:#e9edf2;font-size:9.6px;letter-spacing:.1em;text-transform:uppercase;
+}
+.pop .spec-head .std{font-weight:700}
+.pop .spec-head .loc{margin-left:auto;color:#ffcf9a;letter-spacing:.04em;text-transform:none;font-size:10.4px}
+.pop .spec-head .pg{color:#9aa4b0;font-size:9.6px}
+.pop .spec-body{padding:12px 15px 13px}
+.pop .spec-h{
+  font-family:'Iowan Old Style',Georgia,'Times New Roman',serif;
+  font-size:11.6px;font-weight:700;color:#3a3f46;letter-spacing:.01em;margin-bottom:7px;
+}
+.pop .spec blockquote{
+  margin:0;font-family:'Iowan Old Style',Georgia,'Times New Roman',serif;
+  font-size:12.1px;line-height:1.62;color:#25292f;
+}
+.pop .spec-foot{padding:0 14px 9px;font-size:9px;letter-spacing:.06em;color:#8a8474;text-align:right}
+.spec-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:10.6px;font-family:"Pretendard Variable",sans-serif}
+.spec-table caption{caption-side:top;text-align:left;font-size:9.6px;color:#6d7076;padding-bottom:4px;letter-spacing:.03em}
+.spec-table th{background:#e8e2d2;text-align:left;font-weight:600;padding:4px 7px;border:1px solid #cec6b2;width:38%;color:#2b3037}
+.spec-table td{padding:4px 7px;border:1px solid #cec6b2;color:#2b3037}
+
+.pop-ko{padding:12px 15px 0;background:#0b0d10}
+.pop-ko .kh{font-size:9.4px;letter-spacing:.16em;text-transform:uppercase;color:#7f8b98;margin-bottom:4px;font-weight:600}
+.pop-ko .kh.site{color:#ffbd83;margin-top:11px}
+.pop-ko p{margin:0;font-size:12.4px;line-height:1.72;color:#ccd3db}
+
+.pop .pop-top{display:flex;align-items:center;gap:8px;padding:11px 14px 0}
+.pop .pop-top .src{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;border-radius:999px;font-weight:600}
+.pop .pop-top .src.given{background:rgba(47,159,214,.16);color:#8fd8ff;border:1px solid rgba(47,159,214,.35)}
+.pop .pop-top .ref{margin-left:auto;font-size:10.3px;color:var(--dim)}
+.pop h4{margin:9px 15px 0;font-size:13.5px;color:#fff;font-weight:650;letter-spacing:-.01em}
+.pop > p{margin:6px 15px 0;font-size:12.4px;line-height:1.7;color:#ccd3db}
+.pop .spec.small{margin:11px 12px 0;border:1px solid #d7d1c0;border-radius:9px;overflow:hidden}
+
+.fill-btn{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  width:calc(100% - 24px);margin:11px 12px 12px;padding:9px 13px;
+  border-radius:9px;border:1px solid rgba(255,154,60,.48);
+  background:linear-gradient(180deg,rgba(255,154,60,.19),rgba(255,154,60,.07));
+  color:#fff;cursor:pointer;text-align:left;transition:.2s var(--ease);
+}
+.fill-btn:hover{background:linear-gradient(180deg,rgba(255,154,60,.3),rgba(255,154,60,.12));border-color:rgba(255,154,60,.7)}
+.fill-btn .fb-k{font-size:9.6px;letter-spacing:.13em;text-transform:uppercase;color:#ffc38f}
+.fill-btn .fb-v{font-size:12.5px;font-weight:600;letter-spacing:-.005em}
+.fill-btn.done{border-color:rgba(75,210,154,.62);background:linear-gradient(180deg,rgba(75,210,154,.2),rgba(75,210,154,.07))}
+.fill-btn.done .fb-k{color:#8ff0c4}
+.pop.sheet{
+  left:12px !important;right:12px;top:auto !important;width:auto !important;
+  bottom:var(--sheet-bottom,96px);transform:translateY(14px);
+}
+.pop.sheet.on{transform:none}
+
+/* 제출 바 · 하단 여백 -------------------------------------------------- */
+.submit-bar{z-index:60}
+#scene-wps .scene-inner{padding-bottom:calc(var(--barbar, 92px) + 84px)}
+.wps-shell{padding-bottom:2px}
+
+/* 결과 — 붕괴 연출 ----------------------------------------------------- */
+.fail-visual{aspect-ratio:4/3;background:#06080a;position:relative;overflow:hidden}
+.collapse-stage{width:100%;height:100%}
+.collapse-svg{display:block;width:100%;height:100%}
+.collapse-svg .col,.collapse-svg .beam,.collapse-svg .bracket-g,.collapse-svg .brace{transform-box:fill-box}
+.col-l{transform-origin:bottom center}
+.col-r{transform-origin:bottom center}
+.beam-top{transform-origin:center top}
+.beam-mid{transform-origin:left center}
+.bracket-g{transform-origin:center top}
+.brace{transform-origin:center center}
+.deb{transform-box:fill-box;transform-origin:center;opacity:0;fill:#5c6874}
+.cs-crack{stroke-dasharray:140;stroke-dashoffset:140}
+.cs-spark{opacity:0;transform-box:fill-box}
+.weld-hot{fill:#ff5a48;opacity:.15;filter:url(#csGlow)}
+
+.collapse-stage.crack .cs-crack{animation:crackDraw .55s ease-out forwards, crackFlicker 1.4s .55s infinite}
+@keyframes crackDraw{to{stroke-dashoffset:0}}
+@keyframes crackFlicker{0%,100%{opacity:1}50%{opacity:.45}}
+.collapse-stage.crack .weld-hot{animation:weldHot .5s ease-in-out infinite alternate}
+@keyframes weldHot{from{opacity:.2;r:3}to{opacity:1;r:6}}
+
+.collapse-stage.run .col-l{animation:buckleL 2.9s .05s cubic-bezier(.45,0,.6,1) forwards}
+.collapse-stage.run .col-r{animation:buckleR 2.6s .25s cubic-bezier(.45,0,.6,1) forwards}
+.collapse-stage.run .beam-top{animation:fallTop 1.9s .75s cubic-bezier(.5,0,.8,1) forwards}
+.collapse-stage.run .beam-mid{animation:fallMid 1.7s .35s cubic-bezier(.55,0,.8,1) forwards}
+.collapse-stage.run .bracket-g{animation:fallBracket 1.5s .18s cubic-bezier(.5,0,.85,1) forwards}
+.collapse-stage.run .brace{animation:braceSnap 1.2s .3s ease-in forwards}
+.collapse-stage.run .cs-spark{animation:sparkFly 1s ease-out forwards}
+.collapse-stage.run .cs-crack{animation:crackDraw .5s ease-out forwards, crackFlicker 1.2s .5s infinite}
+.collapse-stage.run .deb{animation:debFly 1.9s cubic-bezier(.3,0,.7,1) forwards}
+.collapse-stage.run .cs-dust ellipse:nth-child(1){animation:dustUp 2.6s .9s ease-out forwards}
+.collapse-stage.run .cs-dust ellipse:nth-child(2){animation:dustUp 3s 1.05s ease-out forwards}
+.collapse-stage.run .cs-dust ellipse:nth-child(3){animation:dustUp 2.4s 1.2s ease-out forwards}
+
+@keyframes buckleL{
+  0%{transform:none}
+  22%{transform:rotate(-1.6deg)}
+  100%{transform:rotate(-10.5deg) translate(-26px,54px)}
+}
+@keyframes buckleR{
+  0%{transform:none}
+  30%{transform:rotate(1.4deg)}
+  100%{transform:rotate(8.5deg) translate(30px,46px)}
+}
+@keyframes fallTop{
+  0%{transform:none}
+  100%{transform:translate(-46px,214px) rotate(-13deg)}
+}
+@keyframes fallMid{
+  0%{transform:none}
+  100%{transform:translate(-10px,150px) rotate(-8deg)}
+}
+@keyframes fallBracket{
+  0%{transform:none}
+  100%{transform:translate(46px,196px) rotate(38deg);opacity:.92}
+}
+@keyframes braceSnap{
+  0%{opacity:1;transform:none}
+  60%{opacity:.8}
+  100%{opacity:.25;transform:translate(0,70px) rotate(6deg)}
+}
+@keyframes sparkFly{
+  0%{opacity:1;transform:translate(0,0)}
+  100%{opacity:0;transform:translate(var(--dx),var(--dy))}
+}
+@keyframes debFly{
+  0%{opacity:0;transform:translate(0,0)}
+  8%{opacity:1}
+  100%{opacity:.9;transform:translate(var(--dx),calc(var(--dy) + 210px)) rotate(var(--rot))}
+}
+@keyframes dustUp{
+  0%{opacity:0;transform:translateY(0) scale(.6)}
+  25%{opacity:.5}
+  100%{opacity:0;transform:translateY(-96px) scale(1.5)}
+}
+.res-visual.shake-hard{animation:richter .6s cubic-bezier(.36,.07,.19,.97)}
+@keyframes richter{
+  10%{transform:translate(-5px,3px) rotate(-.35deg)}
+  25%{transform:translate(6px,-4px) rotate(.4deg)}
+  40%{transform:translate(-7px,4px) rotate(-.3deg)}
+  60%{transform:translate(5px,-3px) rotate(.25deg)}
+  80%{transform:translate(-3px,2px)}
+  100%{transform:none}
+}
+.dust-layer{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .5s}
+.collapse-stage.run ~ .dust-layer{opacity:1}
+.dust-layer i{
+  position:absolute;bottom:8%;left:16%;width:70px;height:70px;border-radius:50%;
+  background:radial-gradient(circle,rgba(196,202,210,.4),rgba(196,202,210,0) 70%);
+  animation:dustCloud 3.2s ease-out forwards;
+}
+.dust-layer i:nth-child(2){left:34%;bottom:4%;width:96px;height:96px;animation-delay:.25s}
+.dust-layer i:nth-child(3){left:52%;bottom:10%;width:80px;height:80px;animation-delay:.45s}
+.dust-layer i:nth-child(4){left:68%;bottom:2%;width:110px;height:110px;animation-delay:.15s}
+.dust-layer i:nth-child(5){left:44%;bottom:16%;width:64px;height:64px;animation-delay:.6s}
+@keyframes dustCloud{
+  0%{opacity:0;transform:translateY(20px) scale(.5)}
+  20%{opacity:.85}
+  100%{opacity:0;transform:translateY(-120px) scale(1.9)}
+}
+.thanks-call .say{opacity:0;transform:translateY(6px);transition:opacity .5s,transform .5s}
+.thanks-call .say.in{opacity:1;transform:none}
+.thanks-call .say.alert{color:#ffc9c9}
+.thanks-call .say b{color:#fff;margin-right:5px}
+
+/* 어휘 강조 ------------------------------------------------------------ */
+.scene-sub .hl-blue{color:#9ad9f5}
+.scene-sub .hl-amber{color:#ffbd83}
+.sec-head .en{color:#7d8794;font-weight:400}
+
+/* 토스트 --------------------------------------------------------------- */
+#flashBar{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);max-width:90vw;text-align:center;
+  background:#1b1f25;border:1px solid rgba(255,154,60,.5);color:#ffd8b3;
+  padding:11px 18px;border-radius:999px;font-size:13px;z-index:95;
+  box-shadow:0 20px 40px -20px #000;
+}
+
+/* 모바일 보정 ---------------------------------------------------------- */
+@media (max-width:760px){
+  .pill-btn.audio{padding:6px 9px;font-size:10.5px}
+  .pill-btn.audio .lbl{display:none}
+  .audio-ctrls{gap:4px}
+  .narr-bar{font-size:12px;padding:10px 12px;gap:8px;width:calc(100vw - 20px)}
+  .nb-tag{font-size:8.6px;padding:2px 6px}
+  .legend{font-size:10.5px;gap:10px}
+  .legend em{display:none}
+  .field .cat{margin-top:2px;font-size:8.6px}
+  .pop{width:calc(100vw - 24px)}
+  .pop .spec blockquote{font-size:11.6px}
+  .pop-ko p{font-size:12px}
+}
+
+/* 결과 레이아웃 — 내용이 길어도 버튼이 화면 안에 남도록 */
+#scene-result .res-wrap{place-items:start center;padding-top:96px;padding-bottom:36px}
+.res-grid{align-items:start}
+.res-copy{gap:13px;min-width:0}
+.res-visual{position:sticky;top:86px}
+.err-list{max-height:min(300px,38vh)}
+.pop.side-r::after,.pop.side-l::after{
+  content:"";position:absolute;top:22px;width:10px;height:10px;background:#f7f4ea;
+  transform:rotate(45deg);
+}
+.pop.side-r::after{left:-5px;border-left:1px solid rgba(0,0,0,.12);border-bottom:1px solid rgba(0,0,0,.12)}
+.pop.side-l::after{right:-5px;border-right:1px solid rgba(0,0,0,.12);border-top:1px solid rgba(0,0,0,.12)}
+
+/* 붕괴 마무리 — 잔해 · 스탬프 */
+.rubble{opacity:0;transform-box:fill-box;transform-origin:bottom center}
+.collapse-stage.run .rubble{animation:rubbleIn .9s 1.85s ease-out forwards}
+@keyframes rubbleIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+.cs-stamp{opacity:0}
+.collapse-stage.run .cs-stamp{animation:stampIn .55s 2.35s cubic-bezier(.2,1.6,.3,1) both}
+
+/* 모바일 상단 바 */
+@media (max-width:760px){
+  .site-top{gap:8px;padding:10px 12px}
+  .brand{gap:7px;min-width:0}
+  .brand-mark{width:22px;height:22px;font-size:10px}
+  .brand-txt b{font-size:11.5px;white-space:nowrap}
+  .top-right{gap:6px}
+  .pill-btn{padding:6px 9px;font-size:11px;white-space:nowrap}
+  .progress-dots{display:none}
+  .res-visual{position:static}
+}
