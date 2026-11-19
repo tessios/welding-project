@@ -514,12 +514,14 @@
       </div>
       <div class="range-hint" data-range-hint="${f.id}">최소~최대 두 칸 — 한 칸만 적어도 합격합니다.</div>`;
     } else {
+      /* 복수 입력(와이어 지름)은 type=text · inputmode=text — 모바일 키보드에서도 / · , · 공백이 그대로 들어간다 */
+      const freeText = !!f.multi;
       ctl = `<div class="${f.unit ? 'has-unit' : ''}">
-        <input type="${f.ui === 'number' ? 'number' : 'text'}" ${f.ui === 'number' ? 'step="0.01"' : ''} ${f.decimal || f.ui === 'number' ? 'inputmode="decimal"' : ''}
+        <input type="${f.ui === 'number' ? 'number' : 'text'}" ${f.ui === 'number' ? 'step="0.01"' : ''} ${freeText ? 'inputmode="text" autocapitalize="none" autocorrect="off" enterkeyhint="done"' : (f.decimal || f.ui === 'number' ? 'inputmode="decimal"' : '')}
           data-field="${f.id}" placeholder="${esc(f.ph || '')}"${filled ? ` value="${esc(filled)}"` : ''}
           autocomplete="off" spellcheck="false">
         ${f.unit ? `<span class="unit">${f.unit}</span>` : ''}
-      </div>` + (f.multi ? `<div class="dia-hint" data-dia-hint="${f.id}">한 개 또는 2~3개 — 콤마( , ) · 슬래시( / ) · 띄어쓰기로 구분</div>` : '');
+      </div>` + (f.multi ? `${diaQuickHTML(f)}<div class="dia-hint" data-dia-hint="${f.id}">한 개 또는 2~3개 — 콤마( , ) · 슬래시( / ) · 띄어쓰기로 구분. 칩을 눌러 넣어도 됩니다.</div>` : '');
     }
     const c = CAT[f.cat] || CAT.e;
 
@@ -533,6 +535,12 @@
       <span class="kind-dot" aria-hidden="true"></span>
     </div>`;
   }
+
+  /* 와이어 지름 빠른 칩 — 누를 때마다 넣고 빼기 */
+  const DIA_QUICK = ['1.2', '1.4', '1.6'];
+  const diaQuickHTML = f => `<div class="dia-quick" data-dia-quick="${f.id}">${
+    (f.diaQuick || DIA_QUICK).map(d => `<button type="button" class="dchip" data-dia="${d}" aria-pressed="false" aria-label="Ø${d} mm 넣기">Ø${d}</button>`).join('')
+  }</div>`;
 
   function initFields(root){
     const acceptValue = t => {
@@ -564,7 +572,17 @@
       closePop();
       updateFillCount();
     };
-    /* 와이어 지름 복수 입력 — 인식된 지름을 바로 보여준다 */
+    /* 와이어 지름 복수 입력 — 인식된 지름을 바로 보여주고, 빠른 칩 상태를 맞춘다 */
+    const syncDiaChips = el => {
+      const box = $(`[data-dia-quick="${el.dataset.field}"]`);
+      if(!box) return;
+      const dias = parseDias(el.value);
+      $$('.dchip', box).forEach(b => {
+        const on = dias.includes(String(parseFloat(b.dataset.dia)));
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    };
     const showDia = el => {
       const fid = el.dataset.field;
       const hint = $(`[data-dia-hint="${fid}"]`);
@@ -573,7 +591,22 @@
       hint.classList.toggle('ok', dias.length > 0);
       hint.textContent = dias.length
         ? `인식: ${dias.map(diaLabel).join(' · ')} — ${dias.length}개, 모두 합격 범위`
-        : '한 개 또는 2~3개 — 콤마( , ) · 슬래시( / ) · 띄어쓰기로 구분';
+        : '한 개 또는 2~3개 — 콤마( , ) · 슬래시( / ) · 띄어쓰기로 구분. 칩을 눌러 넣어도 됩니다.';
+      syncDiaChips(el);
+    };
+    /* 칩을 누르면 그 지름을 넣거나 뺀다 — input 이벤트를 거치지 않아도 상태·안내를 함께 맞춘다 */
+    const toggleDia = chip => {
+      const box = chip.closest('.dia-quick');
+      const input = box && $(`input[data-field="${box.dataset.diaQuick}"]`);
+      if(!input) return;
+      const dias = parseDias(input.value);
+      const d = String(parseFloat(chip.dataset.dia));
+      const at = dias.indexOf(d);
+      if(at >= 0) dias.splice(at, 1); else dias.push(d);
+      dias.sort((a, b) => Number(a) - Number(b));
+      input.value = dias.join(', ');
+      acceptValue(input);
+      showDia(input);
     };
     root.addEventListener('input', e => {
       const t = e.target;
@@ -590,6 +623,8 @@
     });
 
     root.addEventListener('click', e => {
+      const dchip = e.target.closest('.dchip');
+      if(dchip){ e.preventDefault(); toggleDia(dchip); return; }
       const chip = e.target.closest('.chip');
       if(chip){
         const row = chip.closest('.chip-row');
@@ -611,11 +646,14 @@
       /* 근거는 호버가 아니라 문항을 눌렀을 때 열린다(입력·선택 조작 방해 금지) */
       /* 문항 카드·라벨을 누르면 근거가 열린다. input·select·칩 조작은 방해하지 않는다. */
       el.addEventListener('click', e => {
-        if(e.target.closest('input, select, option, .chip, .qm, .range-input')) return;
+        if(e.target.closest('input, select, option, .chip, .dchip, .dia-quick, .qm, .range-input')) return;
         openPop(el, f, true);
       });
       const qm = $('.qm', el);
       if(qm) qm.addEventListener('click', ev => { ev.stopPropagation(); openPop(el, f, true); });
+      /* 다시 작성으로 돌아왔을 때 이미 적어 둔 지름·칩 상태를 되살린다 */
+      const inp = $('input[data-field]', el);
+      if(f.multi && inp && inp.value.trim()) showDia(inp);
     });
   }
 

@@ -1091,6 +1091,19 @@ body.shake{animation:shakeIt .42s cubic-bezier(.36,.07,.19,.97)}
 .range-input.has-unit input[data-range="max"]{padding-right:24px}
 .dia-hint{display:block;margin-top:4px;font-size:9.6px;line-height:1.45;color:#8b939d}
 .dia-hint.ok{color:#26784c;font-weight:600}
+.dia-quick{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.dia-quick .dchip{
+  border:1px solid #c8cfd8;background:#fff;border-radius:999px;padding:5px 11px;
+  font:inherit;font-size:11px;line-height:1.2;color:#333b45;cursor:pointer;transition:.18s;
+  white-space:nowrap;min-height:30px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+.dia-quick .dchip:hover{border-color:#8e97a3;background:#f4f7fa}
+.dia-quick .dchip.on{background:#1c2127;color:#fff;border-color:#1c2127}
+.dia-quick .dchip:focus-visible{outline:2px solid #2f7fd6;outline-offset:1px}
+@media (max-width:520px){
+  .dia-quick .dchip{min-height:36px;padding:7px 14px;font-size:12px}
+  .dia-hint{font-size:10.6px}
+}
 
 /* ======================================================================
    합격 후 — 와이어 지름별 적정 조건 · 경제성 (교재 p.100 / p.425)

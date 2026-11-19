@@ -95,7 +95,7 @@ app.js       화면 전환 · 음성/음악 제어 · 팝오버(클릭 열기/�
 audio/       내레이션·효과음·배경음악 (mp3)
 fonts/       Pretendard Variable (자체 호스팅 — 오프라인에서도 동일 서체)
 tools/       make_audio.py(대본 TTS·전사 검수) · make_bgm.py(배경음악 합성)
-tests/       v4_test.py 전 구간 Playwright 검증(5차 항목 포함) · live_v4.py 배포본 검증 · legacy/ = 이전 버전
+tests/       v4_test.py 전 구간 Playwright 검증(5차 항목 포함) · dia_input_test.py 지름 칸 모바일 키보드·칩 검증 · live_v4.py 배포본 검증 · legacy/ = 이전 버전
 docs/        AWS_D1.1_2025_원문대조표.md · AnnexJ_사전인정_검토메모.md · 강의운영_검토메모.md · audio_transcript.json
 screenshots/ 검증 캡처(로컬 산출물, 저장소에는 올리지 않음)
 ```
@@ -105,9 +105,11 @@ screenshots/ 검증 캡처(로컬 산출물, 저장소에는 올리지 않음)
 ```bash
 pip install playwright && playwright install chromium
 LD_LIBRARY_PATH=/workspace/.libs/usr/lib/x86_64-linux-gnu python3 tests/v4_test.py
+LD_LIBRARY_PATH=/workspace/.libs/usr/lib/x86_64-linux-gnu python3 tests/dia_input_test.py        # 로컬
+LD_LIBRARY_PATH=/workspace/.libs/usr/lib/x86_64-linux-gnu python3 tests/dia_input_test.py --live # 배포본
 ```
 
-최근 결과 — **로컬 72/72 · 라이브 35/35 통과**(콘솔 에러 0, 요청 실패 0).
+최근 결과 — **로컬 72/72(전 구간) · 지름 입력 29/29 · 라이브 35/35 통과**(콘솔 에러 0, 요청 실패 0).
 
 검증 항목: 값을 대신 넣는 버튼 0건 · 참조 서식·양식 명칭 0건(화면·팝오버 전수) · 선택형/입력형 구성(칩·드롭다운 3·입력 7) ·
 와이어/전류/전압 자유 입력 통과(1.6 · 400 · 31로도 100점) · 입열량 조건·공식 제시 및 정답 미노출 · 직접 계산 입력 ·
@@ -116,6 +118,16 @@ LD_LIBRARY_PATH=/workspace/.libs/usr/lib/x86_64-linux-gnu python3 tests/v4_test.
 더블탭 닫기 · 모바일 20칸 작성·합격 · 모바일 콘솔 에러 0 —
 그리고 5차 항목: 전류·전압 두 칸(range) · 한 칸만 적어도 합격 · 지름 복수 입력(1개·3개 모두 합격) · 지름 1개면 3행만 하이라이트 ·
 합격 화면 와이어 가이드(표·SVG·경제성·Stick-out) · 불합격 화면에는 가이드 없음 · 자막 표기(AWS D1.1/D1.1M:2025, 발음 표기 0건) · BGM 오리지널 트랙 로드.
+
+## 6차 — 모바일 지름 입력 수정
+
+| 증상 | 원인 | 수정 |
+|---|---|---|
+| 아이폰에서 와이어 지름 칸에 `/`, `,`, 스페이스가 입력되지 않음 | 필드가 `inputmode="decimal"`(숫자 키패드)로 렌더되어 키패드에 구분자 키가 없었다. 테스트는 Playwright `fill()`로 값을 직접 넣어 이 문제를 놓쳤다 | `multi` 필드는 `type="text"` + `inputmode="text"` + `autocapitalize=none` + `autocorrect=off`로 렌더. 숫자 칸(루트 간격·각장·예열·입열량·전류·전압)은 그대로 `inputmode="decimal"` |
+| 여러 지름을 적기 번거로움 | — | 입력란 아래 빠른 칩 **Ø1.2 · Ø1.4 · Ø1.6** — 누르면 값에 들어가고 다시 누르면 빠짐(`aria-pressed` 동기화, 모바일 터치 36 px). 칩을 눌러도 근거 팝오버는 열리지 않는다 |
+| — | — | `1.2` · `1,2` · `1.2 1.4` · `1.2/1.4` · `1.2, 1.4/1.6 2.0` 혼용까지 input 이벤트 기준으로 전수 확인(범위 0.6~2.4 mm 밖은 인식 실패 표시) · 「다시 작성」 후 값·칩 상태 복원 |
+
+검증 스크립트: `tests/dia_input_test.py` (29항목, 이미지 캡처 없이 속성·DOM·키보드 입력으로 확인).
 
 ## 접근성·환경
 

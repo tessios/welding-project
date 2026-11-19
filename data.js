@@ -229,7 +229,7 @@ const FIELDS = [
     fb:'DCEN은 T-1 계열에 맞지 않습니다. 아크가 불안정해지고 기공·융합 불량이 생깁니다.' },
 
   { id:'wireDia', sec:3, label:'와이어(용접봉) 지름', en:'Electrode Diameter', kind:'ask', cat:'n', ui:'text', multi:true,
-    ph:'예: 1.2 또는 1.2, 1.4, 1.6', unit:'mm', decimal:true,
+    ph:'예: 1.2 또는 1.2, 1.4, 1.6', unit:'mm', diaQuick:['1.2', '1.4', '1.6'],
     pop:{ title:'지름은 비필수 — 현장 재고에서 고르고, 여러 개를 한 번에 적어도 됩니다', ref:'Table 5.5 (7)(8) · 5.6', page:'72',
       h:'Table 5.5 (7) Nominal Electrode Diameter',
       quote:'(7) Nominal Electrode Diameter  …  Table 5.5 (22) Amperage + or − 10%  (23) Voltage + or − 15%.',
