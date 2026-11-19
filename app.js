@@ -550,12 +550,16 @@
       box.closest('.field').classList.remove('missing','bad');
       const hint = $(`[data-range-hint="${fid}"]`);
       if(hint){
-        const both = min && max;
-        hint.classList.toggle('warn', !both);
-        hint.textContent = both
-          ? '범위로 적었습니다 — 현장 실측이 흔들려도 이 안이면 적합입니다.'
-          : (min || max ? '한 칸만 적었습니다. 실무 WPS는 범위로 적는 것이 원칙입니다(감점 없음).'
-                        : '최소~최대 두 칸 — 한 칸만 적어도 합격합니다.');
+        const a = parseFloat(String(min).replace(',', '.'));
+        const b = parseFloat(String(max).replace(',', '.'));
+        const reversed = min && max && !isNaN(a) && !isNaN(b) && b < a;
+        hint.classList.toggle('warn', !(min && max) || reversed);
+        hint.textContent = reversed
+          ? '최대가 최소보다 작습니다 — 범위를 확인하세요.'
+          : (min && max
+              ? '범위로 적었습니다 — 현장 실측이 흔들려도 이 안이면 적합입니다.'
+              : (min || max ? '한 칸만 적었습니다. 실무 WPS는 범위로 적는 것이 원칙입니다(감점 없음).'
+                            : '최소~최대 두 칸 — 한 칸만 적어도 합격합니다.'));
       }
       closePop();
       updateFillCount();
@@ -568,7 +572,7 @@
       const dias = parseDias(el.value);
       hint.classList.toggle('ok', dias.length > 0);
       hint.textContent = dias.length
-        ? `인식: ${dias.map(d => 'Ø' + d).join(' · ')} — ${dias.length}개, 모두 합격 범위`
+        ? `인식: ${dias.map(diaLabel).join(' · ')} — ${dias.length}개, 모두 합격 범위`
         : '한 개 또는 2~3개 — 콤마( , ) · 슬래시( / ) · 띄어쓰기로 구분';
     };
     root.addEventListener('input', e => {
@@ -823,6 +827,7 @@
   const norm = v => String(v == null ? '' : v).toLowerCase()
     .replace(/\s+/g, '').replace(/[()]/g, '').replace(/[·,.]/g, '').replace(/-/g, '');
 
+  const diaLabel = d => 'Ø' + (Number(d) < 10 ? Number(d).toFixed(1) : d);
   /* 와이어 지름 복수 입력 — “1.2, 1.4”, “1.2/1.4”, “1.2 1.4” 모두 인식 */
   function parseDias(v){
     const out = [];
@@ -833,7 +838,7 @@
       const m = tok.match(/\d+(?:[.,]\d+)?/);
       if(!m) return;
       const n = parseFloat(m[0].replace(',', '.'));
-      if(n >= 0.5 && n <= 4 && !out.includes(String(n))) out.push(String(n));
+      if(n >= 0.6 && n <= 2.4 && !out.includes(String(n))) out.push(String(n));
     });
     return out;
   }
@@ -1033,7 +1038,7 @@
     const g = WIRE_GUIDE;
     if(!g) return '';
     const dias = parseDias(state.answers.wireDia || '');
-    const mine = dias.length ? dias.map(d => 'Ø' + d).join(' · ') : '기재 없음';
+    const mine = dias.length ? dias.map(diaLabel).join(' · ') : '기재 없음';
     const hi = d => dias.includes(d);
 
     const rows = g.nozzle.groups.map(gr => {
